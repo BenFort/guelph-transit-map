@@ -38,12 +38,13 @@ function Update()
                 label:
                 {
                     text: buses[i].route,
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    fontSize: buses[i].route.length > 2 ? '10px' : '17px'
                 },
                 icon:
                 {
                     url: './app/bus.png',
-                    labelOrigin: new google.maps.Point(14, 12)
+                    labelOrigin: new google.maps.Point(15, 12)
                 }
             }));
         }
