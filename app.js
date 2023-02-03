@@ -40,30 +40,6 @@ function GetRouteName(routeId)
     return 'UNKNOWN';
 }
 
-app.get(GetPath('/map-script'), function(req, res)
-{
-    https.get('https://maps.googleapis.com/maps/api/js?key=' + process.env.GOOGLE_MAPS_API_KEY + '&callback=initMap', function(resp)
-    {
-        let data = '';
-
-        resp.on('data', function(chunk)
-        {
-            data += chunk;
-        });
-
-        resp.on('end', function()
-        {
-            res.type('.js');
-            res.send(data);
-        });
-
-    }).on('error', function(err)
-    {
-        console.log('Error: ' + err.message);
-    });
-
-});
-
 app.get(GetPath('/data'), function (req, res)
 {
     https.get('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb', function(resp)
