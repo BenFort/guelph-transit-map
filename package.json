@@ -1,0 +1,17 @@
+{
+  "name": "guelph-transit-map",
+  "version": "1.0.0",
+  "description": "Live view of Guelph Transit bus locations",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ben Fortin",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parse": "^5.3.1",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "protobufjs": "^7.1.2"
+  }
+}
