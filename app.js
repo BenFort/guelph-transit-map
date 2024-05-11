@@ -2,18 +2,11 @@ require('dotenv').config();
 
 const express = require('express');
 const protobuf = require("protobufjs");
-const https = require('https');
 const fs = require('fs');
-const { parse } = require('csv-parse');
+const { parse } = require('csv-parse/sync');
+const unzipper = require('unzipper');
 
-let ROUTES;
-
-const parser = parse({columns: true}, function(err, data)
-{
-    ROUTES = data;
-});
-
-fs.createReadStream(__dirname + '/routes.txt').pipe(parser);
+let routes = [];
 
 const app = express();
 
@@ -27,63 +20,50 @@ function GetPath(path)
     return ENDPOINT_PREFIX + path;
 }
 
-function GetRouteName(routeId)
+async function GetRouteName(routeId)
 {
-    for (let routeIndex in ROUTES)
+    let route = routes.find(x => x.route_id == routeId);
+
+    if (!route)
     {
-        let route = ROUTES[routeIndex];
-        if (route.route_id === routeId)
+		console.log("updating routes");
+        let response = await fetch(new Request('http://data.open.guelph.ca/datafiles/guelph-transit/guelph_transit_gtfs.zip'));
+        if (response.ok)
         {
-            return route.route_short_name;
+            let responseData = await response.arrayBuffer();
+            let unzippedFileBuffer = await unzipper.Open.buffer(Buffer.from(responseData));
+            let routesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'routes.txt').buffer();
+            routes = parse(routesFileBuffer.toString(), { columns: true });
         }
     }
-    return 'UNKNOWN';
+
+    route = routes.find(x => x.route_id == routeId);
+
+    return route?.route_short_name ?? 'UKNOWN';
 }
 
-app.get(GetPath('/data'), function (req, res)
+app.get(GetPath('/data'), async function (req, res)
 {
-    https.get('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb', function(resp)
-    {
-        let data = [];
-
-        resp.on('data', function(chunk)
-        {
-            data.push(chunk);
-        });
-
-        resp.on('end', function()
-        {
-            let buffer = Buffer.concat(data);
-            
-            protobuf.load('gtfs-realtime.proto', function(err, root)
-            {
-                if (err)
-                    throw err;
-                
-                let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
-                        
-                let message = FeedMessage.decode(buffer);
-                
-                let object = FeedMessage.toObject(message, {
-                    enums: String
-                });
-                
-                let vehicles = [];
-                
-                for (let entityIndex in object.entity)
-                {
-                    vehicles.push({ 'route': GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
-                }
-                
-                res.json(vehicles);
-            });
-        });
-
-    }).on('error', function(err)
-    {
-        console.log('Error: ' + err.message);
-    });
+    let response = await fetch(new Request('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb'));
+	if (response.ok)
+	{
+		let responseData = await response.arrayBuffer();
+		
+		let root = protobuf.loadSync('gtfs-realtime.proto');
+			
+		let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
+		
+		let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(responseData)));
+		
+		let vehicles = [];
+		
+		for (let entityIndex in object.entity)
+		{
+			vehicles.push({ 'route': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
+		}
+		
+		res.json(vehicles);
+	}
 });
 
 app.listen(8081);
-

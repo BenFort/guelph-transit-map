@@ -51,17 +51,13 @@ function Update()
     });
 }
 
-setInterval(function()
-{
-    Update();
-}, 31000);
-
 let count = 31;
 setInterval(function()
 {
     count--;
     if (count == 0)
     {
+        Update();
         count = 31;
     }
     
