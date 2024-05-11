@@ -9,9 +9,9 @@
   "author": "Ben Fortin",
   "license": "ISC",
   "dependencies": {
-    "csv-parse": "^5.3.1",
-    "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "protobufjs": "^7.1.2"
+    "csv-parse": "^5.5.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "protobufjs": "^7.3.0"
   }
 }
