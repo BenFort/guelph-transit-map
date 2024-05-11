@@ -26,7 +26,6 @@ async function GetRouteName(routeId)
 
     if (!route)
     {
-		console.log("updating routes");
         let response = await fetch(new Request('http://data.open.guelph.ca/datafiles/guelph-transit/guelph_transit_gtfs.zip'));
         if (response.ok)
         {
@@ -45,25 +44,25 @@ async function GetRouteName(routeId)
 app.get(GetPath('/data'), async function (req, res)
 {
     let response = await fetch(new Request('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb'));
-	if (response.ok)
-	{
-		let responseData = await response.arrayBuffer();
-		
-		let root = protobuf.loadSync('gtfs-realtime.proto');
-			
-		let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
-		
-		let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(responseData)));
-		
-		let vehicles = [];
-		
-		for (let entityIndex in object.entity)
-		{
-			vehicles.push({ 'route': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
-		}
-		
-		res.json(vehicles);
-	}
+    if (response.ok)
+    {
+        let responseData = await response.arrayBuffer();
+        
+        let root = protobuf.loadSync('gtfs-realtime.proto');
+            
+        let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
+        
+        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(responseData)));
+        
+        let vehicles = [];
+        
+        for (let entityIndex in object.entity)
+        {
+            vehicles.push({ 'route': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
+        }
+
+        res.json(vehicles);
+    }
 });
 
 app.listen(8081);
