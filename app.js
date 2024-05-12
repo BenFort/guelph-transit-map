@@ -11,14 +11,6 @@ let routes = [];
 const app = express();
 
 app.use(express.static('public'));
-app.use(express.static('public/app'));
-
-const ENDPOINT_PREFIX = process.env.NGINX_CONFIG === 'true' ? '' : '/app';
-
-function GetPath(path)
-{
-    return ENDPOINT_PREFIX + path;
-}
 
 async function GetRouteName(routeId)
 {
@@ -41,7 +33,7 @@ async function GetRouteName(routeId)
     return route?.route_short_name ?? 'UKNOWN';
 }
 
-app.get(GetPath('/data'), async function (req, res)
+app.get('/data', async function (req, res)
 {
     let response = await fetch(new Request('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb'));
     if (response.ok)
