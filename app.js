@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const express = require('express');
 const protobuf = require("protobufjs");
 const fs = require('fs');
