@@ -1,6 +1,5 @@
 const express = require('express');
 const protobuf = require("protobufjs");
-const fs = require('fs');
 const { parse } = require('csv-parse/sync');
 const unzipper = require('unzipper');
 
