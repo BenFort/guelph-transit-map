@@ -15,12 +15,15 @@ async function initMap()
     response = await fetch('route-data');
     if (response.ok)
     {
-        let routes = await response.json();        
+        let routes = await response.json();
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
             const newButton = document.createElement('button');
             newButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
+            newButton.style.fontSize = '50px';
+            newButton.style.margin = '8px';
+            newButton.style.height = 90;
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
             newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor));
