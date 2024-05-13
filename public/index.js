@@ -8,6 +8,7 @@ async function initMap()
     {
         zoom: 13,
         center: { lat: 43.538832, lng: -80.245294 },
+        gestureHandling: 'greedy'
     });
 
     UpdateBusPositionMarkers();
