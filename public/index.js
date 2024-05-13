@@ -89,7 +89,7 @@ function GenerateArrowIcons()
 {
     const lineSymbol =
     {
-        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+        path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
     };
 
     let icons = [];
