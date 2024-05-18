@@ -27,6 +27,7 @@ async function initMap()
             newButton.style.height = 90;
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
+            newButton.id = route.routeId;
             newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor));
             document.body.appendChild(newButton);
         });
@@ -103,24 +104,39 @@ function GenerateArrowIcons()
 
 async function DisplayRoute(routeId, color)
 {
-    displayedRoutes.forEach(route => route.setMap(null));
+    const btn = document.getElementById(routeId)
 
-    let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
-    let coords = [];
-    if (response.ok)
+    if (!btn.classList.contains('selected'))
     {
-        coords = await response.json();
+        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
+        let coords = [];
+        if (response.ok)
+        {
+            coords = await response.json();
+        }
+    
+        // Create the polyline and add the symbol via the 'icons' property.
+        coords.forEach(coordSet => displayedRoutes.push(new google.maps.Polyline(
+        {
+            path: coordSet,
+            icons: GenerateArrowIcons(),
+            map: map,
+            strokeColor: color
+        })));
+        btn.classList.add('selected');
     }
-
-    // Create the polyline and add the symbol via the 'icons' property.
-    coords.forEach(coordSet => displayedRoutes.push(new google.maps.Polyline(
+    else
     {
-        path: coordSet,
-        icons: GenerateArrowIcons(),
-        map: map,
-        strokeColor: color
-    })));
+        btn.classList.remove('selected');
+        displayedRoutes.forEach((route) => 
+        {
+            if(route.strokeColor == color){
+                route.setMap(null)
+            }
+        });
+    }
 }
+
 function CompareRoutes(routeA, routeB)
 {
     let routeA_num = Number(routeA.routeShortName);
