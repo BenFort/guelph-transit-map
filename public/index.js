@@ -29,8 +29,8 @@ async function initMap()
             newButton.style.height = 90;
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
-            newButton.id = route.routeId;
-            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor));
+            newButton.id = route.routeShortName;
+            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor, route.routeShortName));
             document.body.appendChild(newButton);
         });
     }
@@ -48,29 +48,33 @@ function UpdateBusPositionMarkers()
         }
 
         markers = [];
+        selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
 
         for (let i in buses)
         {
-            markers.push(new google.maps.Marker(
+            if (selectedBtns.namedItem(buses[i].route) || selectedBtns.length == 0)
             {
-                position:
+                markers.push(new google.maps.Marker(
                 {
-                    lat: buses[i].position.latitude,
-                    lng: buses[i].position.longitude
-                },
-                map: map,
-                label:
-                {
-                    text: buses[i].route,
-                    fontWeight: 'bold',
-                    fontSize: buses[i].route.length > 2 ? '10px' : '17px'
-                },
-                icon:
-                {
-                    url: 'bus.png',
-                    labelOrigin: new google.maps.Point(15, 12)
-                }
-            }));
+                    position:
+                    {
+                        lat: buses[i].position.latitude,
+                        lng: buses[i].position.longitude
+                    },
+                    map: map,
+                    label:
+                    {
+                        text: buses[i].route,
+                        fontWeight: 'bold',
+                        fontSize: buses[i].route.length > 2 ? '10px' : '17px'
+                    },
+                    icon:
+                    {
+                        url: 'bus.png',
+                        labelOrigin: new google.maps.Point(15, 12)
+                    }
+                }));
+            }
         }
     });
 }
@@ -104,9 +108,9 @@ function GenerateArrowIcons()
     return icons;
 }
 
-async function DisplayRoute(routeId, color)
+async function DisplayRoute(routeId, color, routeName)
 {
-    const btn = document.getElementById(routeId)
+    const btn = document.getElementById(routeName);
 
     if (!btn.classList.contains(CSS_CLASS_SELECTED))
     {
@@ -119,7 +123,7 @@ async function DisplayRoute(routeId, color)
 
         let routeObj = 
         {
-            id: routeId,
+            name: routeName,
             lines: []
         };
         
@@ -134,13 +138,15 @@ async function DisplayRoute(routeId, color)
         displayedRoutes.push(routeObj);
         
         btn.classList.add(CSS_CLASS_SELECTED);
+        UpdateBusPositionMarkers();
     }
     else
     {
-        let displayedRouteIndex = displayedRoutes.findIndex(route => route.id == routeId);
+        let displayedRouteIndex = displayedRoutes.findIndex(route => route.name == routeName);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
         btn.classList.remove(CSS_CLASS_SELECTED);
+        UpdateBusPositionMarkers();
     }
 }
 
