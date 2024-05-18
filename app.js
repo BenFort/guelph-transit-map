@@ -13,7 +13,7 @@ app.use(express.static('public'));
 
 async function UpdateArrays()
 {
-    let response = await fetch(new Request('http://data.open.guelph.ca/datafiles/guelph-transit/guelph_transit_gtfs.zip'));
+    let response = await fetch('http://data.open.guelph.ca/datafiles/guelph-transit/guelph_transit_gtfs.zip');
     if (response.ok)
     {
         let responseData = await response.arrayBuffer();
@@ -46,7 +46,7 @@ async function GetRouteName(routeId)
 
 app.get('/bus-positions', async function (req, res)
 {
-    let response = await fetch(new Request('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb'));
+    let response = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb');
     if (response.ok)
     {
         let responseData = await response.arrayBuffer();
