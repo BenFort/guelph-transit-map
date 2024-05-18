@@ -27,7 +27,8 @@ async function initMap()
             newButton.style.height = 90;
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
-            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor));
+            newButton.classList.add(route.routeShortName);
+            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor , route.routeShortName));
             document.body.appendChild(newButton);
         });
     }
@@ -101,26 +102,40 @@ function GenerateArrowIcons()
     return icons;
 }
 
-async function DisplayRoute(routeId, color)
+async function DisplayRoute(routeId, color, routeName)
 {
-    displayedRoutes.forEach(route => route.setMap(null));
-
-    let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
+    const btns = document.getElementsByClassName(routeName);
     let coords = [];
-    if (response.ok)
-    {
-        coords = await response.json();
-    }
 
-    // Create the polyline and add the symbol via the 'icons' property.
-    coords.forEach(coordSet => displayedRoutes.push(new google.maps.Polyline(
+    if (btns[0].style.border != '5px solid rgb(64, 64, 64)')
     {
-        path: coordSet,
-        icons: GenerateArrowIcons(),
-        map: map,
-        strokeColor: color
-    })));
+        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
+        if (response.ok)
+        {
+            coords = await response.json();
+        }
+    
+        // Create the polyline and add the symbol via the 'icons' property.
+        coords.forEach(coordSet => displayedRoutes.push(new google.maps.Polyline(
+        {
+            path: coordSet,
+            icons: GenerateArrowIcons(),
+            map: map,
+            strokeColor: color
+        })));
+        btns[0].style.border = '5px solid rgb(64, 64, 64)';
+    }
+    else
+    {
+        btns[0].style.border = null;
+        displayedRoutes.forEach((route) => {
+            if(route.strokeColor == color){
+                route.setMap(null)
+            }
+        });
+    }
 }
+
 function CompareRoutes(routeA, routeB)
 {
     let routeA_num = Number(routeA.routeShortName);
