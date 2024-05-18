@@ -1,4 +1,5 @@
 const CSS_CLASS_SELECTED = 'selected';
+const UPDATE_INTERVAL_SEC = 31;
 
 let map;
 let markers = [];
@@ -13,7 +14,7 @@ async function initMap()
         gestureHandling: 'greedy'
     });
 
-    UpdateBusPositionMarkers();
+    await UpdateBusPositionMarkers();
 
     response = await fetch('route-data');
     if (response.ok)
@@ -30,18 +31,18 @@ async function initMap()
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
             newButton.id = route.routeId;
-            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor));
+            newButton.addEventListener('click', async () => await ToggleRoute(route));
             document.body.appendChild(newButton);
         });
     }
 }
 
-function UpdateBusPositionMarkers()
+async function UpdateBusPositionMarkers()
 {
-    fetch('bus-positions')
-    .then(response => { return response.json() })
-    .then(buses =>
+    let response = await fetch('bus-positions')
+    if (response.ok)
     {
+        let buses = await response.json();
         for (let index in markers)
         {
             markers[index].setMap(null);
@@ -72,20 +73,20 @@ function UpdateBusPositionMarkers()
                 }
             }));
         }
-    });
+    }
 }
 
-let count = 31;
-setInterval(function()
+let secCount = UPDATE_INTERVAL_SEC;
+setInterval(async function()
 {
-    count--;
-    if (count == 0)
+    secCount--;
+    if (secCount == 0)
     {
-        UpdateBusPositionMarkers();
-        count = 31;
+        await UpdateBusPositionMarkers();
+        secCount = UPDATE_INTERVAL_SEC;
     }
     
-    document.getElementById('countdown').innerHTML = 'Next update in ' + count + ' seconds';
+    document.getElementById('countdown').innerHTML = 'Next update in ' + secCount + ' seconds';
 }, 1000);
 
 function GenerateArrowIcons()
@@ -104,13 +105,13 @@ function GenerateArrowIcons()
     return icons;
 }
 
-async function DisplayRoute(routeId, color)
+async function ToggleRoute(route)
 {
-    const btn = document.getElementById(routeId)
+    const btn = document.getElementById(route.routeId)
 
     if (!btn.classList.contains(CSS_CLASS_SELECTED))
     {
-        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
+        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: route.routeId }));
         let coords = [];
         if (response.ok)
         {
@@ -119,7 +120,7 @@ async function DisplayRoute(routeId, color)
 
         let routeObj = 
         {
-            id: routeId,
+            id: route.routeId,
             lines: []
         };
         
@@ -128,7 +129,7 @@ async function DisplayRoute(routeId, color)
             path: coordSet,
             icons: GenerateArrowIcons(),
             map: map,
-            strokeColor: color
+            strokeColor: '#' + route.routeColor
         })));
         
         displayedRoutes.push(routeObj);
@@ -137,7 +138,7 @@ async function DisplayRoute(routeId, color)
     }
     else
     {
-        let displayedRouteIndex = displayedRoutes.findIndex(route => route.id == routeId);
+        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.id == route.routeId);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
         btn.classList.remove(CSS_CLASS_SELECTED);
