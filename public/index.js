@@ -49,7 +49,7 @@ async function UpdateBusPositionMarkers()
         }
 
         markers = [];
-        selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
+        let selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
 
         for (let i in buses)
         {
@@ -139,7 +139,7 @@ async function ToggleRoute(route)
         displayedRoutes.push(routeObj);
         
         btn.classList.add(CSS_CLASS_SELECTED);
-        UpdateBusPositionMarkers();
+        await UpdateBusPositionMarkers();
     }
     else
     {
@@ -148,7 +148,7 @@ async function ToggleRoute(route)
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
         btn.classList.remove(CSS_CLASS_SELECTED);
-        UpdateBusPositionMarkers();
+        await UpdateBusPositionMarkers();
     }
 }
 
