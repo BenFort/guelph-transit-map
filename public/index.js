@@ -106,7 +106,7 @@ async function DisplayRoute(routeId, color)
 {
     const btn = document.getElementById(routeId)
 
-    if (!btns.classList.contains('selected'))
+    if (!btn.classList.contains('selected'))
     {
         let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
         let coords = [];
@@ -123,11 +123,11 @@ async function DisplayRoute(routeId, color)
             map: map,
             strokeColor: color
         })));
-        btns.classList.add('selected');
+        btn.classList.add('selected');
     }
     else
     {
-        btns.classList.remove('selected');
+        btn.classList.remove('selected');
         displayedRoutes.forEach((route) => 
         {
             if(route.strokeColor == color){
