@@ -27,8 +27,8 @@ async function initMap()
             newButton.style.height = 90;
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
-            newButton.id = route.routeShortName;
-            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor , route.routeShortName));
+            newButton.id = route.routeId;
+            newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor));
             document.body.appendChild(newButton);
         });
     }
@@ -102,10 +102,10 @@ function GenerateArrowIcons()
     return icons;
 }
 
-async function DisplayRoute(routeId, color, routeName)
+async function DisplayRoute(routeId, color)
 {
-    const btns = document.getElementById(routeName)
-    
+    const btns = document.getElementById(routeId)
+
     if (!btns.classList.contains('selected'))
     {
         let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
