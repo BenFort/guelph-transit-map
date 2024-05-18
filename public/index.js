@@ -104,7 +104,7 @@ function GenerateArrowIcons()
 
 async function DisplayRoute(routeId, color)
 {
-    const btns = document.getElementById(routeId)
+    const btn = document.getElementById(routeId)
 
     if (!btns.classList.contains('selected'))
     {
