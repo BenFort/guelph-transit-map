@@ -3,3 +3,8 @@
     height: 800px;
     width: 100%;
 }
+
+.selected
+{
+    border: 5px solid rgb(64, 64, 64);
+}

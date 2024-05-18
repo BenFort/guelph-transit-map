@@ -27,7 +27,7 @@ async function initMap()
             newButton.style.height = 90;
             newButton.style.backgroundColor = '#' + route.routeColor
             newButton.style.color = 'white';
-            newButton.classList.add(route.routeShortName);
+            newButton.id = route.routeShortName;
             newButton.addEventListener('click', async () => await DisplayRoute(route.routeId, '#' + route.routeColor , route.routeShortName));
             document.body.appendChild(newButton);
         });
@@ -104,12 +104,12 @@ function GenerateArrowIcons()
 
 async function DisplayRoute(routeId, color, routeName)
 {
-    const btns = document.getElementsByClassName(routeName);
-    let coords = [];
-
-    if (btns[0].style.border != '5px solid rgb(64, 64, 64)')
+    const btns = document.getElementById(routeName)
+    
+    if (!btns.classList.contains('selected'))
     {
         let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
+        let coords = [];
         if (response.ok)
         {
             coords = await response.json();
@@ -123,12 +123,13 @@ async function DisplayRoute(routeId, color, routeName)
             map: map,
             strokeColor: color
         })));
-        btns[0].style.border = '5px solid rgb(64, 64, 64)';
+        btns.classList.add('selected');
     }
     else
     {
-        btns[0].style.border = null;
-        displayedRoutes.forEach((route) => {
+        btns.classList.remove('selected');
+        displayedRoutes.forEach((route) => 
+        {
             if(route.strokeColor == color){
                 route.setMap(null)
             }
