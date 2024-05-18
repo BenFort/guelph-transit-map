@@ -114,26 +114,31 @@ async function DisplayRoute(routeId, color)
         {
             coords = await response.json();
         }
-    
-        // Create the polyline and add the symbol via the 'icons' property.
-        coords.forEach(coordSet => displayedRoutes.push(new google.maps.Polyline(
+
+        let routeObj = 
+        {
+            id: routeId,
+            lines: []
+        };
+        
+        coords.forEach(coordSet => routeObj.lines.push(new google.maps.Polyline(
         {
             path: coordSet,
             icons: GenerateArrowIcons(),
             map: map,
             strokeColor: color
         })));
+        
+        displayedRoutes.push(routeObj);
+        
         btn.classList.add('selected');
     }
     else
     {
+        let displayedRouteIndex = displayedRoutes.findIndex(route => route.id == routeId);
+        displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
+        displayedRoutes.splice(displayedRouteIndex, 1);
         btn.classList.remove('selected');
-        displayedRoutes.forEach((route) => 
-        {
-            if(route.strokeColor == color){
-                route.setMap(null)
-            }
-        });
     }
 }
 
