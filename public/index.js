@@ -1,3 +1,5 @@
+const CSS_CLASS_SELECTED = 'selected';
+
 let map;
 let markers = [];
 let displayedRoutes = [];
@@ -106,7 +108,7 @@ async function DisplayRoute(routeId, color)
 {
     const btn = document.getElementById(routeId)
 
-    if (!btn.classList.contains('selected'))
+    if (!btn.classList.contains(CSS_CLASS_SELECTED))
     {
         let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: routeId }));
         let coords = [];
@@ -131,14 +133,14 @@ async function DisplayRoute(routeId, color)
         
         displayedRoutes.push(routeObj);
         
-        btn.classList.add('selected');
+        btn.classList.add(CSS_CLASS_SELECTED);
     }
     else
     {
         let displayedRouteIndex = displayedRoutes.findIndex(route => route.id == routeId);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
-        btn.classList.remove('selected');
+        btn.classList.remove(CSS_CLASS_SELECTED);
     }
 }
 
