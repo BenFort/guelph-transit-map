@@ -4,6 +4,7 @@ const UPDATE_INTERVAL_SEC = 31;
 let map;
 let markers = [];
 let displayedRoutes = [];
+let buses = [];
 
 async function initMap()
 {
@@ -14,7 +15,7 @@ async function initMap()
         gestureHandling: 'greedy'
     });
 
-    await UpdateBusPositionMarkers();
+    await UpdateBusPositionMarkers(true);
 
     response = await fetch('route-data');
     if (response.ok)
@@ -37,12 +38,22 @@ async function initMap()
     }
 }
 
-async function UpdateBusPositionMarkers()
+async function UpdateBusPositionMarkers(fetchNewData)
 {
-    let response = await fetch('bus-positions')
-    if (response.ok)
+	let response = null;
+	
+	if (fetchNewData)
+	{
+		response = await fetch('bus-positions')
+	}
+	
+    if (!fetchNewData || response.ok)
     {
-        let buses = await response.json();
+		if (fetchNewData)
+		{
+			buses = await response.json();
+		}
+		
         for (let index in markers)
         {
             markers[index].setMap(null);
@@ -86,7 +97,7 @@ setInterval(async function()
     secCount--;
     if (secCount == 0)
     {
-        await UpdateBusPositionMarkers();
+        await UpdateBusPositionMarkers(true);
         secCount = UPDATE_INTERVAL_SEC;
     }
     
@@ -139,7 +150,6 @@ async function ToggleRoute(route)
         displayedRoutes.push(routeObj);
         
         btn.classList.add(CSS_CLASS_SELECTED);
-        await UpdateBusPositionMarkers();
     }
     else
     {
@@ -147,8 +157,9 @@ async function ToggleRoute(route)
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
         btn.classList.remove(CSS_CLASS_SELECTED);
-        await UpdateBusPositionMarkers();
     }
+	
+	await UpdateBusPositionMarkers(false);
 }
 
 function CompareRoutes(routeA, routeB)
