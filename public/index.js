@@ -52,7 +52,6 @@ async function initMap()
             const newButton = document.createElement('button');
             newButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
             newButton.style.backgroundColor = '#' + route.routeColor;
-            newButton.style.color = 'white';
             newButton.id = route.routeShortName;
             newButton.classList.add(CSS_CLASS_BUTTON);
             newButton.addEventListener('click', async () => await ToggleRoute(route));
