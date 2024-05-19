@@ -1,4 +1,7 @@
 const CSS_CLASS_SELECTED = 'selected';
+const CSS_CLASS_ROUNDCORNERS = 'rcorners';
+const CSS_CLASS_BUTTONDIV = 'buttonDiv';
+const CSS_CLASS_BUTTON = 'button';
 const UPDATE_INTERVAL_SEC = 31;
 
 let map;
@@ -12,7 +15,16 @@ async function initMap()
     {
         zoom: 13,
         center: { lat: 43.538832, lng: -80.245294 },
-        gestureHandling: 'greedy'
+        gestureHandling: 'greedy',
+        mapTypeControl: true,
+        mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_RIGHT
+        },
+        zoomControlOptions: {
+            position: google.maps.ControlPosition.TOP_RIGHT
+        },
+        streetViewControl: false
     });
 
     await UpdateBusPositionMarkers(true);
@@ -20,22 +32,33 @@ async function initMap()
     response = await fetch('route-data');
     if (response.ok)
     {
+        let buttonDiv = document.createElement('div');
+        let countdownDiv = document.createElement('div');
+        let heading = document.createElement('h1');
+        let countdown = document.createElement('h3');
+
+        heading.innerText =  "Guelph Transit Map";
+        countdown.id = "countdown"
+        countdownDiv.appendChild(heading);
+        countdownDiv.appendChild(document.createElement('br'));
+        countdownDiv.appendChild(countdown);
+        buttonDiv.classList.add(CSS_CLASS_BUTTONDIV);
+        countdownDiv.classList.add(CSS_CLASS_ROUNDCORNERS);
+
         let routes = await response.json();
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
             const newButton = document.createElement('button');
             newButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
-            newButton.style.fontSize = '25px';
-            newButton.style.margin = '6px';
-            newButton.style.height = 70;
-            newButton.style.width = 350;
-            newButton.style.backgroundColor = '#' + route.routeColor
-            newButton.style.color = 'white';
+            newButton.style.backgroundColor = '#' + route.routeColor;
             newButton.id = route.routeShortName;
+            newButton.classList.add(CSS_CLASS_BUTTON);
             newButton.addEventListener('click', async () => await ToggleRoute(route));
-            document.body.appendChild(newButton);
+            buttonDiv.appendChild(newButton);
         });
+        map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(buttonDiv);
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(countdownDiv);
     }
 }
 
