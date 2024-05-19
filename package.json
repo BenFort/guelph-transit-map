@@ -4,6 +4,7 @@
   "description": "Live view of Guelph Transit bus locations",
   "main": "app.js",
   "scripts": {
+    "start":"start http://localhost:8081 & node app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Ben Fortin",

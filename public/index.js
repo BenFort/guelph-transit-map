@@ -7,10 +7,27 @@ const UPDATE_INTERVAL_SEC = 31;
 let map;
 let markers = [];
 let displayedRoutes = [];
+let displayedStops = [];
 let buses = [];
 
 async function initMap()
 {
+    const styles = 
+    {
+        default: [],
+        hide: [
+        {
+            featureType: "poi.business",
+            stylers: [{ visibility: "off" }],
+        },
+        {
+            featureType: "transit",
+            elementType: "labels.icon",
+            stylers: [{ visibility: "off" }],
+        },
+        ],
+    }; 
+
     map = new google.maps.Map(document.getElementById('map'),
     {
         zoom: 13,
@@ -24,8 +41,9 @@ async function initMap()
         zoomControlOptions: {
             position: google.maps.ControlPosition.TOP_RIGHT
         },
-        streetViewControl: false
-    });
+        streetViewControl: false,
+        styles: styles["hide"]
+    });     
 
     await UpdateBusPositionMarkers(true);
 
@@ -162,6 +180,12 @@ async function ToggleRoute(route)
             name: route.routeShortName,
             lines: []
         };
+
+        let stopObj = 
+        {
+            name: route.routeShortName,
+            stops: []
+        };
         
         coords.forEach(coordSet => routeObj.lines.push(new google.maps.Polyline(
         {
@@ -171,7 +195,15 @@ async function ToggleRoute(route)
             strokeColor: '#' + route.routeColor
         })));
         
+        route.routeStops.forEach(stop => stopObj.stops.push(new google.maps.Marker(
+        {
+            position: { lat: stop.stopLat, lng: stop.stopLon },
+            map,
+            title: stop.stopName,
+        })));
+
         displayedRoutes.push(routeObj);
+        displayedStops.push(stopObj);
         
         btn.classList.add(CSS_CLASS_SELECTED);
     }
@@ -180,6 +212,11 @@ async function ToggleRoute(route)
         let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.name == route.routeShortName);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
+
+        let displayedStopIndex = displayedStops.findIndex(displayedStop => displayedStop.name == route.routeShortName);
+        displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
+        displayedStops.splice(displayedStopIndex, 1);
+        
         btn.classList.remove(CSS_CLASS_SELECTED);
     }
 	
