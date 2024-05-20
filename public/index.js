@@ -185,7 +185,7 @@ async function ToggleRoute(route)
             coordSetList = await response.json();
         }
 
-        let routeObj = 
+        let routeObj =
         {
             route: route,
             lines: []
@@ -199,12 +199,13 @@ async function ToggleRoute(route)
             strokeColor: '#' + route.routeColor
         })));
 
+        displayedRoutes.push(routeObj);
+
         if(showStops)
         {
             DisplayStops(route);
         }
 
-        displayedRoutes.push(routeObj);
         btn.classList.add(CSS_CLASS_SELECTED);
     }
     else

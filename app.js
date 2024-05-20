@@ -7,7 +7,7 @@ let routes = [];
 let trips = [];
 let shapes = [];
 let stops = [];
-let times = [];
+let stopTimes = [];
 
 const app = express();
 
@@ -34,7 +34,7 @@ async function UpdateArrays()
         stops = parse(stopsFileBuffer.toString(), { columns: true });
 
         let timesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'stop_times.txt').buffer();
-        times = parse(timesFileBuffer.toString(), { columns: true });
+        stopTimes = parse(timesFileBuffer.toString(), { columns: true });
     }
 }
 
@@ -66,7 +66,7 @@ app.get('/bus-positions', async function (req, res)
         let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(responseData)));
         
         let vehicles = [];
-        
+                
         for (let entityIndex in object.entity)
         {
             vehicles.push({ 'routeShortName': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
@@ -100,37 +100,26 @@ app.get('/route-data', function (req, res)
     let result = [];
     routes.forEach(route =>
     {
-        let routeTrips = trips.filter(trip => trip.route_id == route.route_id);
-        let routeStops = [];
-        let routeStopIDs = [];
+        let tripsForRoute = trips.filter(trip => trip.route_id == route.route_id);
+        
+        let stopIds = new Set();
 
-        times.forEach(time =>
+        tripsForRoute.forEach(trip =>
         {
-            routeTrips.forEach(routeTrip =>
-            {
-                if (time.trip_id == routeTrip.trip_id && !routeStopIDs.includes(time.stop_id))
-                {
-                    routeStopIDs.push(time.stop_id)
-                    stops.forEach(stop =>
-                    {
-                        if (stop.stop_id == time.stop_id)
-                        {
-                            routeStops.push({ stopId: Number(stop.stop_id), stopName: stop.stop_name, stopDesc: stop.stop_desc, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) })
-                        }     
-                    });
-                }     
-            });
+            stopTimes.filter(stopTime => stopTime.trip_id == trip.trip_id).forEach(stopTime => stopIds.add(stopTime.stop_id));
         });
-
+        
+        let routeStops = [];
+        
+        stopIds.forEach(stopId =>
+        {
+            let stop = stops.find(stop => stop.stop_id == stopId);
+            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) })
+        });
+        
         result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
     });
-    res.json(result);
-});
-
-app.get('/stop-data', function (req, res)
-{
-    let result = [];
-    stops.forEach(stop => result.push({ stopId: Number(stop.stop_id), stopName: stop.stop_name, stopDesc: stop.stop_desc, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) }));
+    
     res.json(result);
 });
 
