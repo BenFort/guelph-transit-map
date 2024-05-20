@@ -6,6 +6,8 @@ const unzipper = require('unzipper');
 let routes = [];
 let trips = [];
 let shapes = [];
+let stops = [];
+let times = [];
 
 const app = express();
 
@@ -27,6 +29,12 @@ async function UpdateArrays()
                 
         let shapesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'shapes.txt').buffer();
         shapes = parse(shapesFileBuffer.toString(), { columns: true });
+
+        let stopsFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'stops.txt').buffer();
+        stops = parse(stopsFileBuffer.toString(), { columns: true });
+
+        let timesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'stop_times.txt').buffer();
+        times = parse(timesFileBuffer.toString(), { columns: true });
     }
 }
 
@@ -90,7 +98,39 @@ app.get('/shape-coords-for-route-id', function (req, res)
 app.get('/route-data', function (req, res)
 {
     let result = [];
-    routes.forEach(route => result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color }));
+    routes.forEach(route =>
+    {
+        let routeTrips = trips.filter(trip => trip.route_id == route.route_id);
+        let routeStops = [];
+        let routeStopIDs = [];
+
+        times.forEach(time =>
+        {
+            routeTrips.forEach(routeTrip =>
+            {
+                if (time.trip_id == routeTrip.trip_id && !routeStopIDs.includes(time.stop_id))
+                {
+                    routeStopIDs.push(time.stop_id)
+                    stops.forEach(stop =>
+                    {
+                        if (stop.stop_id == time.stop_id)
+                        {
+                            routeStops.push({ stopId: Number(stop.stop_id), stopName: stop.stop_name, stopDesc: stop.stop_desc, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) })
+                        }     
+                    });
+                }     
+            });
+        });
+
+        result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
+    });
+    res.json(result);
+});
+
+app.get('/stop-data', function (req, res)
+{
+    let result = [];
+    stops.forEach(stop => result.push({ stopId: Number(stop.stop_id), stopName: stop.stop_name, stopDesc: stop.stop_desc, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) }));
     res.json(result);
 });
 
