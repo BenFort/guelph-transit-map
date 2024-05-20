@@ -100,39 +100,28 @@ app.get('/route-data', function (req, res)
     let result = [];
     routes.forEach(route =>
     {
-        let routeTrips = [];
+        let routeTrips = trips.filter(trip => trip.route_id == route.route_id);
         let routeStops = [];
         let routeStopIDs = [];
-        trips.forEach(trip =>
-        {
-            if (trip.route_id == route.route_id){
-                if(!routeTrips.includes(trip.trip_id))
-                {
-                    routeTrips.push(trip.trip_id)
-                }   
-            }
-        });
+
         times.forEach(time =>
         {
             routeTrips.forEach(routeTrip =>
             {
-                if (time.trip_id == routeTrip){
-                    if(!routeStopIDs.includes(time.stop_id))
+                if (time.trip_id == routeTrip.trip_id && !routeStopIDs.includes(time.stop_id))
+                {
+                    routeStopIDs.push(time.stop_id)
+                    stops.forEach(stop =>
                     {
-                        routeStopIDs.push(time.stop_id)
-                    } 
+                        if (stop.stop_id == time.stop_id)
+                        {
+                            routeStops.push({ stopId: Number(stop.stop_id), stopName: stop.stop_name, stopDesc: stop.stop_desc, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) })
+                        }     
+                    });
                 }     
             });
         });
-        stops.forEach(stop =>
-        {
-            routeStopIDs.forEach(routeStopID =>
-            {
-                if (stop.stop_id == routeStopID){
-                    routeStops.push({ stopId: Number(stop.stop_id), stopName: stop.stop_name, stopDesc: stop.stop_desc, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) })
-                }     
-            });
-        });
+
         result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
     });
     res.json(result);

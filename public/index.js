@@ -2,9 +2,12 @@ const CSS_CLASS_SELECTED = 'selected';
 const CSS_CLASS_ROUNDCORNERS = 'rcorners';
 const CSS_CLASS_BUTTONDIV = 'buttonDiv';
 const CSS_CLASS_BUTTON = 'button';
+const CSS_CLASS_SETTINGS = 'settingsButton';
+const CSS_CLASS_SETACTIVE = 'settingsButtonActive';
 const UPDATE_INTERVAL_SEC = 31;
 
 let map;
+let stopsToggle = false;
 let markers = [];
 let displayedRoutes = [];
 let displayedStops = [];
@@ -54,6 +57,7 @@ async function initMap()
         let countdownDiv = document.createElement('div');
         let heading = document.createElement('h1');
         let countdown = document.createElement('h3');
+        let settingsButton = document.createElement('button');
 
         heading.innerText =  "Guelph Transit Map";
         countdown.id = "countdown"
@@ -62,6 +66,12 @@ async function initMap()
         countdownDiv.appendChild(countdown);
         buttonDiv.classList.add(CSS_CLASS_BUTTONDIV);
         countdownDiv.classList.add(CSS_CLASS_ROUNDCORNERS);
+
+        settingsButton.textContent = "Show/Hide Bus Stops"
+        settingsButton.classList.add(CSS_CLASS_SETTINGS);
+        settingsButton.addEventListener('click', async () => await ToggleStops());
+        countdownDiv.appendChild(document.createElement('hr'));
+        countdownDiv.appendChild(settingsButton);
 
         let routes = await response.json();
         routes.sort(CompareRoutes);
@@ -177,14 +187,9 @@ async function ToggleRoute(route)
 
         let routeObj = 
         {
+            route: route,
             name: route.routeShortName,
             lines: []
-        };
-
-        let stopObj = 
-        {
-            name: route.routeShortName,
-            stops: []
         };
         
         coords.forEach(coordSet => routeObj.lines.push(new google.maps.Polyline(
@@ -194,43 +199,13 @@ async function ToggleRoute(route)
             map: map,
             strokeColor: '#' + route.routeColor
         })));
-        
-        const markerImage = "marker.png";
-    
-        route.routeStops.forEach(stop => 
+
+        if(stopsToggle)
         {
-            const marker = new google.maps.Marker(
-            {
-                position: { lat: stop.stopLat, lng: stop.stopLon },
-                map,
-                icon: markerImage,
-            });
-
-            const infowindow = new google.maps.InfoWindow(
-            {
-                content: '<h1 style="font-size:17px">' + stop.stopName +'</h1>',
-            });            
-
-            map.addListener('click', function() 
-            {
-                if (infowindow) infowindow.close();
-            });
-
-            marker.addListener("click", () => 
-            {
-                infowindow.open(
-                {
-                  anchor: marker,
-                  map,
-                });
-            });
-            
-            stopObj.stops.push(marker);
-        });
+            DisplayStops(route);
+        }
 
         displayedRoutes.push(routeObj);
-        displayedStops.push(stopObj);
-        
         btn.classList.add(CSS_CLASS_SELECTED);
     }
     else
@@ -239,14 +214,97 @@ async function ToggleRoute(route)
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
 
-        let displayedStopIndex = displayedStops.findIndex(displayedStop => displayedStop.name == route.routeShortName);
-        displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
-        displayedStops.splice(displayedStopIndex, 1);
-        
+        if(stopsToggle)
+        {
+            let displayedStopIndex = displayedStops.findIndex(displayedStop => displayedStop.name == route.routeShortName);
+            displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
+            displayedStops.splice(displayedStopIndex, 1);
+        }
+
         btn.classList.remove(CSS_CLASS_SELECTED);
     }
 	
 	await UpdateBusPositionMarkers(false);
+}
+
+async function ToggleStops()
+{
+    stopsToggle = !stopsToggle;
+    let settingsButton = document.getElementsByClassName(CSS_CLASS_SETTINGS)[0];
+    let selectedRoutes = document.getElementsByClassName(CSS_CLASS_SELECTED);
+
+    if(stopsToggle)
+    {
+        settingsButton.classList.add(CSS_CLASS_SETACTIVE);
+    }
+    else
+    {
+        settingsButton.classList.remove(CSS_CLASS_SETACTIVE);
+    }
+
+    for(let routeButton of selectedRoutes)
+    {
+        let routeShortName = routeButton.textContent.split(' - ')[0];
+        displayedRoutes.forEach(displayedRoute =>
+        {
+            if(displayedRoute.route.routeShortName == routeShortName)
+            {
+                if(stopsToggle)
+                {
+                    DisplayStops(displayedRoute.route);
+                }
+                else
+                {
+                    let displayedStopIndex = displayedStops.findIndex(displayedStop => displayedStop.name == displayedRoute.route.routeShortName);
+                    displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
+                    displayedStops.splice(displayedStopIndex, 1);
+                }
+            }
+        });
+    }
+}
+
+function DisplayStops(route)
+{
+    const markerImage = "marker.png";
+
+    let stopObj = 
+    {
+        name: route.routeShortName,
+        stops: []
+    };
+
+    route.routeStops.forEach(stop => 
+    {
+        const marker = new google.maps.Marker(
+        {
+            position: { lat: stop.stopLat, lng: stop.stopLon },
+            map,
+            icon: markerImage,
+        });
+
+        const infowindow = new google.maps.InfoWindow(
+        {
+            content: '<h1 style="font-size:17px">' + stop.stopName +'</h1>',
+        });            
+
+        map.addListener('click', function() 
+        {
+            if (infowindow) infowindow.close();
+        });
+
+        marker.addListener("click", () => 
+        {
+            infowindow.open(
+            {
+            anchor: marker,
+            map,
+            });
+        });
+            
+        stopObj.stops.push(marker);
+    });
+    displayedStops.push(stopObj);
 }
 
 function CompareRoutes(routeA, routeB)
