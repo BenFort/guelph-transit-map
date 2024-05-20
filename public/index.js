@@ -70,7 +70,7 @@ async function initMap()
         settingsButton.id = "settingsButton"
         settingsButton.textContent = "Show/Hide Bus Stops"
         settingsButton.classList.add(CSS_CLASS_SETTINGS);
-        settingsButton.addEventListener('click', async () => await ToggleStops());
+        settingsButton.addEventListener('click', ToggleStops);
         countdownDiv.appendChild(document.createElement('hr'));
         countdownDiv.appendChild(settingsButton);
 
