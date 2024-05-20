@@ -7,7 +7,7 @@ const CSS_CLASS_SETACTIVE = 'settingsButtonActive';
 const UPDATE_INTERVAL_SEC = 31;
 
 let map;
-let stopsToggle = false;
+let showStops = false;
 let markers = [];
 let displayedRoutes = [];
 let displayedStops = [];
@@ -67,6 +67,7 @@ async function initMap()
         buttonDiv.classList.add(CSS_CLASS_BUTTONDIV);
         countdownDiv.classList.add(CSS_CLASS_ROUNDCORNERS);
 
+        settingsButton.id = "settingsButton"
         settingsButton.textContent = "Show/Hide Bus Stops"
         settingsButton.classList.add(CSS_CLASS_SETTINGS);
         settingsButton.addEventListener('click', async () => await ToggleStops());
@@ -200,7 +201,7 @@ async function ToggleRoute(route)
             strokeColor: '#' + route.routeColor
         })));
 
-        if(stopsToggle)
+        if(showStops)
         {
             DisplayStops(route);
         }
@@ -214,7 +215,7 @@ async function ToggleRoute(route)
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
 
-        if(stopsToggle)
+        if(showStops)
         {
             let displayedStopIndex = displayedStops.findIndex(displayedStop => displayedStop.name == route.routeShortName);
             displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
@@ -227,13 +228,13 @@ async function ToggleRoute(route)
 	await UpdateBusPositionMarkers(false);
 }
 
-async function ToggleStops()
+function ToggleStops()
 {
-    stopsToggle = !stopsToggle;
-    let settingsButton = document.getElementsByClassName(CSS_CLASS_SETTINGS)[0];
+    showStops = !showStops;
+    let settingsButton = document.getElementById('settingsButton');
     let selectedRoutes = document.getElementsByClassName(CSS_CLASS_SELECTED);
 
-    if(stopsToggle)
+    if(showStops)
     {
         settingsButton.classList.add(CSS_CLASS_SETACTIVE);
     }
@@ -249,7 +250,7 @@ async function ToggleStops()
         {
             if(displayedRoute.route.routeShortName == routeShortName)
             {
-                if(stopsToggle)
+                if(showStops)
                 {
                     DisplayStops(displayedRoute.route);
                 }
@@ -293,7 +294,7 @@ function DisplayStops(route)
             if (infowindow) infowindow.close();
         });
 
-        marker.addListener("click", () => 
+        marker.addListener('click', () => 
         {
             infowindow.open(
             {
