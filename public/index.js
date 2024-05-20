@@ -195,12 +195,38 @@ async function ToggleRoute(route)
             strokeColor: '#' + route.routeColor
         })));
         
-        route.routeStops.forEach(stop => stopObj.stops.push(new google.maps.Marker(
+        const markerImage = "marker.png";
+    
+        route.routeStops.forEach(stop => 
         {
-            position: { lat: stop.stopLat, lng: stop.stopLon },
-            map,
-            title: stop.stopName,
-        })));
+            const marker = new google.maps.Marker(
+            {
+                position: { lat: stop.stopLat, lng: stop.stopLon },
+                map,
+                icon: markerImage,
+            });
+
+            const infowindow = new google.maps.InfoWindow(
+            {
+                content: '<h1 style="font-size:17px">' + stop.stopName +'</h1>',
+            });            
+
+            map.addListener('click', function() 
+            {
+                if (infowindow) infowindow.close();
+            });
+
+            marker.addListener("click", () => 
+            {
+                infowindow.open(
+                {
+                  anchor: marker,
+                  map,
+                });
+            });
+            
+            stopObj.stops.push(marker);
+        });
 
         displayedRoutes.push(routeObj);
         displayedStops.push(stopObj);
