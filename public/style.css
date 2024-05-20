@@ -35,7 +35,7 @@
     max-height: 358px;
 }
 
-.settingsButton
+.toggleStopsButton
 {
     background-color: #fff;
     border: 2px solid #fff;
@@ -50,7 +50,7 @@
     text-align: center;
 }
 
-.settingsButtonActive
+.toggleStopsButtonActive
 {
     border: 2px solid #d3d2d2;
     background-color: #d3d2d2;

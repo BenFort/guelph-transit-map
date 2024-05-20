@@ -69,7 +69,7 @@ app.get('/bus-positions', async function (req, res)
         
         for (let entityIndex in object.entity)
         {
-            vehicles.push({ 'route': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
+            vehicles.push({ 'routeShortName': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
         }
 
         res.json(vehicles);
