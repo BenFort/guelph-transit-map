@@ -13,6 +13,9 @@ let displayedRoutes = [];
 let displayedStops = [];
 let busPositions = [];
 
+let loading = true;
+let secCount = UPDATE_INTERVAL_SEC;
+
 async function initMap()
 {
     const styles =
@@ -45,30 +48,35 @@ async function initMap()
         },
         zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
         streetViewControl: false,
-        styles: styles["hide"]
+        styles: styles['hide']
     });
 
     let countdownDiv = document.createElement('div');
     countdownDiv.classList.add(CSS_CLASS_ROUNDCORNERS);
 
     let heading = document.createElement('h1');
-    heading.innerText =  "Guelph Transit Map";
+    heading.innerText =  'Guelph Transit Map';
     countdownDiv.appendChild(heading);
     
     countdownDiv.appendChild(document.createElement('br'));
     
     let countdown = document.createElement('h3');
-    countdown.id = "countdown"
+    countdown.id = 'countdown';
+    countdown.textContent = 'Loading...';
     countdownDiv.appendChild(countdown);
     
     countdownDiv.appendChild(document.createElement('hr'));
 
     let toggleStopsButton = document.createElement('button');
-    toggleStopsButton.id = "toggleStopsButton"
-    toggleStopsButton.textContent = "Show/Hide Bus Stops"
+    toggleStopsButton.id = 'toggleStopsButton'
+    toggleStopsButton.textContent = 'Show/Hide Bus Stops'
     toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_STOPS_BUTTON);
     toggleStopsButton.addEventListener('click', ToggleStops);
     countdownDiv.appendChild(toggleStopsButton);
+    
+    map.controls[google.maps.ControlPosition.TOP_LEFT].push(countdownDiv);
+
+    await UpdateBusPositionMarkers(true);
 
     let buttonDiv = document.createElement('div');
     buttonDiv.classList.add(CSS_CLASS_BUTTONDIV);
@@ -90,10 +98,8 @@ async function initMap()
         });
         
         map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(buttonDiv);
-        map.controls[google.maps.ControlPosition.TOP_LEFT].push(countdownDiv);
+        loading = false;
     }
-    
-    await UpdateBusPositionMarkers(true);
 }
 
 async function UpdateBusPositionMarkers(fetchNewData)
@@ -143,7 +149,6 @@ async function UpdateBusPositionMarkers(fetchNewData)
     });
 }
 
-let secCount = UPDATE_INTERVAL_SEC;
 setInterval(async function()
 {
     secCount--;
@@ -153,7 +158,10 @@ setInterval(async function()
         secCount = UPDATE_INTERVAL_SEC;
     }
     
-    document.getElementById('countdown').textContent = 'Next update in ' + secCount + ' seconds';
+    if (!loading)
+    {
+        document.getElementById('countdown').textContent = 'Next update in ' + secCount + ' seconds';
+    }
 }, 1000);
 
 function GenerateArrowIcons()

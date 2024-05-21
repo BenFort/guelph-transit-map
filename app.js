@@ -79,11 +79,9 @@ app.get('/bus-positions', async function (req, res)
 app.get('/shape-coords-for-route-id', function (req, res)
 {
     let result = [];
-
-    let tripsForRoute = trips.filter(trip => trip.route_id == req.query.routeId);
-    
     let shapeIds = new Set();
-    tripsForRoute.forEach(trip => shapeIds.add(trip.shape_id));
+
+    trips.filter(trip => trip.route_id == req.query.routeId).forEach(trip => shapeIds.add(trip.shape_id));
     
     shapeIds.forEach(shapeId =>
     {
@@ -98,25 +96,34 @@ app.get('/shape-coords-for-route-id', function (req, res)
 app.get('/route-data', function (req, res)
 {
     let result = [];
+    let tripIdStopIds = {};
+    
+    stopTimes.forEach(stopTime =>
+    {
+        let key = stopTime.trip_id.toString();
+        if (!tripIdStopIds[key])
+        {
+            tripIdStopIds[key] = { stopIds: new Set([stopTime.stop_id]) };
+        }
+        else
+        {
+            tripIdStopIds[key].stopIds.add(stopTime.stop_id);
+        }
+    });
+
     routes.forEach(route =>
     {
-        let tripsForRoute = trips.filter(trip => trip.route_id == route.route_id);
-        
-        let stopIds = new Set();
-
-        tripsForRoute.forEach(trip =>
-        {
-            stopTimes.filter(stopTime => stopTime.trip_id == trip.trip_id).forEach(stopTime => stopIds.add(stopTime.stop_id));
-        });
-        
         let routeStops = [];
-        
-        stopIds.forEach(stopId =>
+
+        trips.filter(trip => trip.route_id == route.route_id).forEach(trip =>
         {
-            let stop = stops.find(stop => stop.stop_id == stopId);
-            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) })
+            tripIdStopIds[trip.trip_id.toString()].stopIds.forEach(stopId =>
+            {
+                let stop = stops.find(stop => stop.stop_id == stopId);
+                routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) });
+            });
         });
-        
+
         result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
     });
     
