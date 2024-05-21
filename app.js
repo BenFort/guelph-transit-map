@@ -113,15 +113,16 @@ app.get('/route-data', function (req, res)
 
     routes.forEach(route =>
     {
+        let routeStopIds = new Set();
+        trips
+            .filter(trip => trip.route_id == route.route_id)
+            .forEach(trip => tripIdStopIds[trip.trip_id.toString()].stopIds.forEach(stopId => routeStopIds.add(stopId)));
+        
         let routeStops = [];
-
-        trips.filter(trip => trip.route_id == route.route_id).forEach(trip =>
+        routeStopIds.forEach(stopId =>
         {
-            tripIdStopIds[trip.trip_id.toString()].stopIds.forEach(stopId =>
-            {
-                let stop = stops.find(stop => stop.stop_id == stopId);
-                routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) });
-            });
+            let stop = stops.find(stop => stop.stop_id == stopId);
+            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) });
         });
 
         result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
