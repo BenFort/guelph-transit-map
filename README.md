@@ -21,8 +21,7 @@ I was tired of standing at a bus stop and wondering where my bus was, as buses i
 
 ### Executing program
 
-* Run `node app.js`
-* Navigate to `localhost:8081` in a web browser
+* Run `npm start`
 
 ## Authors
 
