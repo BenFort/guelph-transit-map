@@ -16,9 +16,11 @@ let busPositionMarkers = [];
 let displayedRoutes = [];
 let displayedStops = [];
 let busPositions = [];
+let stopInfoWindows = [];
 
 let loading = true;
 let secCount = UPDATE_INTERVAL_SEC;
+let showControls = true;
 
 async function initMap()
 {
@@ -55,7 +57,10 @@ async function initMap()
         styles: styles['hide']
     });
 
+    map.addListener('click', MapClick);
+
     let countdownDiv = document.createElement('div');
+    countdownDiv.id = 'countdownDiv';
     countdownDiv.classList.add(CSS_CLASS_ROUNDCORNERS);
 
     let heading = document.createElement('h1');
@@ -81,6 +86,7 @@ async function initMap()
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(countdownDiv);
 
     let currentLocationControlDiv = document.createElement('div');
+    currentLocationControlDiv.id = 'currentLocationControl';
     currentLocationControlDiv.style.marginTop = '10px';
 
     let currentLocationButton = document.createElement('button');
@@ -112,6 +118,7 @@ async function initMap()
     await UpdateMarkers(true);
 
     let toggleStopsButtonDiv = document.createElement('div');
+    toggleStopsButtonDiv.id = 'toggleStopsButtonDiv';
     toggleStopsButtonDiv.classList.add(CSS_CLASS_BUTTONDIV);
 
     response = await fetch('route-data');
@@ -350,26 +357,23 @@ function DisplayStops(route)
 
     route.routeStops.forEach(stop => 
     {
-        const marker = new google.maps.Marker(
+        let marker = new google.maps.Marker(
         {
             position: { lat: stop.stopLat, lng: stop.stopLon },
             map,
             icon: 'marker.png',
         });
 
-        const infowindow = new google.maps.InfoWindow(
+        let infoWindow = new google.maps.InfoWindow(
         {
             content: '<h1 style="font-size:17px">' + stop.stopName +'</h1>',
         });            
 
-        map.addListener('click', function() 
-        {
-            if (infowindow) infowindow.close();
-        });
-
         marker.addListener('click', () => 
         {
-            infowindow.open(
+            stopInfoWindows.push(infoWindow);
+
+            infoWindow.open(
             {
                 anchor: marker,
                 map,
@@ -380,6 +384,34 @@ function DisplayStops(route)
     });
 
     displayedStops.push(stopObj);
+}
+
+function MapClick()
+{
+    console.log(stopInfoWindows)
+    if (stopInfoWindows.length != 0)
+    {
+        stopInfoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
+        stopInfoWindows = [];
+    }
+    else
+    {
+        showControls = !showControls;
+        if (showControls)
+        {
+            document.getElementById('countdownDiv').classList.remove('hidden');
+            document.getElementById('toggleStopsButtonDiv').classList.remove('hidden');
+            document.getElementById('currentLocationControl').classList.remove('hidden');
+            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+        }
+        else
+        {
+            document.getElementById('countdownDiv').classList.add('hidden');
+            document.getElementById('toggleStopsButtonDiv').classList.add('hidden');
+            document.getElementById('currentLocationControl').classList.add('hidden');
+            map.setOptions({mapTypeControl: false, zoomControl: false, fullscreenControl: false});
+        }
+    }
 }
 
 function CompareRoutes(routeA, routeB)
