@@ -100,6 +100,16 @@ async function initMap()
         map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(buttonDiv);
         loading = false;
     }
+    response = await fetch('alerts');
+
+    if (response.ok)
+    {
+        let alerts = await response.json();
+        alerts.forEach(alert =>
+        {
+            console.log(alert)
+        });
+    }
 }
 
 async function UpdateBusPositionMarkers(fetchNewData)

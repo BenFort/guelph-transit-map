@@ -38,6 +38,28 @@ async function UpdateArrays()
     }
 }
 
+function UnixTimestampConverter(timestamp)
+{
+    let dateObj = new Date(timestamp * 1000);
+    let months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let year = dateObj.getFullYear();
+    let month = months[dateObj.getMonth()];
+    let date = dateObj.getDate();
+
+    let hour = dateObj.getHours();
+    hour = hour <=9 ? `0${hour}` : hour;
+
+    let min = dateObj.getMinutes();
+    min = min <=9 ? `0${min}` : min;
+
+    let sec = dateObj.getSeconds();
+    sec = sec <=9 ? `0${sec}` : sec;
+
+    let converted = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + '.' + sec ;
+
+    return converted;
+}
+
 async function GetRouteName(routeId)
 {
     let route = routes.find(x => x.route_id == routeId);
@@ -73,6 +95,48 @@ app.get('/bus-positions', async function (req, res)
         }
 
         res.json(vehicles);
+    }
+});
+
+app.get('/alerts', async function (req, res)
+{
+    let response = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/alert/alerts.pb');
+    if (response.ok)
+    {
+        let responseData = await response.arrayBuffer();
+        
+        let root = protobuf.loadSync('gtfs-realtime.proto');
+            
+        let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
+        
+        let message = FeedMessage.decode(new Uint8Array(responseData));
+
+        let object = FeedMessage.toObject(message, 
+        {
+            enums: String
+        });
+        
+        let alerts = [];
+
+        for (let entityIndex in object.entity)
+        {
+            let activePeriod =
+            {
+                start: UnixTimestampConverter(object.entity[entityIndex].alert.activePeriod[0].start.low),
+                end: UnixTimestampConverter(object.entity[entityIndex].alert.activePeriod[0].end.low)
+            };
+
+            let alert = {
+                alertID: object.entity[entityIndex].id,
+                activePeriod: activePeriod,
+                affectedRoutes: object.entity[entityIndex].alert.informedEntity,
+                alertType: object.entity[entityIndex].alert.effect,
+                headerText: object.entity[entityIndex].alert.headerText.translation[0].text,
+                descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text,
+            }
+            alerts.push(alert);
+        }
+        res.json(alerts);
     }
 });
 
