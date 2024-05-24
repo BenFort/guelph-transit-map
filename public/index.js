@@ -98,7 +98,7 @@ async function initMap()
         showLocation = !showLocation;
         if (showLocation)
         {
-            ShowCurrentLocation()
+            ShowCurrentLocation(true)
         }
         else
         {
@@ -135,7 +135,7 @@ async function initMap()
     }
 }
 
-function ShowCurrentLocation()
+function ShowCurrentLocation(setMapCenter)
 {
     document.getElementById('currentLocationButtonImage').style.backgroundPosition = '0 0';
 
@@ -143,19 +143,27 @@ function ShowCurrentLocation()
     {
         navigator.geolocation.getCurrentPosition(position =>
         {
+            let pos =
+            {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            
             locationMarker = new google.maps.Marker(
             {
-                position:
-                {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                },
+                position: pos,
                 map: map,
                 icon:
                 {
                     url: 'current_location.png'
                 }
             });
+            
+            if (setMapCenter)
+            {
+                map.setCenter(pos);
+                map.setZoom(16);
+            }
             
             document.getElementById('currentLocationButtonImage').style.backgroundPosition = (-30 * 9) + 'px 0';
         });
@@ -211,7 +219,7 @@ async function UpdateMarkers(fetchNewData)
     if (showLocation)
     {
         locationMarker.setMap(null);
-        ShowCurrentLocation();
+        ShowCurrentLocation(false);
     }
 }
 
