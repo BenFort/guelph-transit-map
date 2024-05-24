@@ -55,3 +55,33 @@
     border: 2px solid #d3d2d2;
     background-color: #d3d2d2;
 }
+
+.currentLocationButton
+{
+    background-color: #fff;
+    border: none;
+    outline: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    cursor: pointer;
+    margin-right: 10px;
+    padding: 0;
+}
+
+.currentLocationButtonImage
+{
+    margin: 5px;
+    width: 30px;
+    height: 30px;
+    background-image: url(https://maps.gstatic.com/tactile/mylocation/mylocation-sprite-2x.png);
+    background-size: 300px 30px;
+    background-position: 0 0;
+    background-repeat: no-repeat;
+}
+
+.hidden
+{
+	display: none;
+}

@@ -4,17 +4,23 @@ const CSS_CLASS_BUTTONDIV = 'buttonDiv';
 const CSS_CLASS_BUTTON = 'button';
 const CSS_CLASS_TOGGLE_STOPS_BUTTON = 'toggleStopsButton';
 const CSS_CLASS_BUTTON_ACTIVE = 'toggleStopsButtonActive';
+const CSS_CLASS_CURRENT_LOCATION_BUTTON = 'currentLocationButton';
+const CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE = 'currentLocationButtonImage';
 const UPDATE_INTERVAL_SEC = 31;
 
 let map;
 let showStops = false;
+let showLocation = false;
+let locationMarker;
 let busPositionMarkers = [];
 let displayedRoutes = [];
 let displayedStops = [];
 let busPositions = [];
+let stopInfoWindows = [];
 
 let loading = true;
 let secCount = UPDATE_INTERVAL_SEC;
+let showControls = true;
 
 async function initMap()
 {
@@ -51,7 +57,10 @@ async function initMap()
         styles: styles['hide']
     });
 
+    map.addListener('click', MapClick);
+
     let countdownDiv = document.createElement('div');
+    countdownDiv.id = 'countdownDiv';
     countdownDiv.classList.add(CSS_CLASS_ROUNDCORNERS);
 
     let heading = document.createElement('h1');
@@ -76,10 +85,41 @@ async function initMap()
     
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(countdownDiv);
 
-    await UpdateBusPositionMarkers(true);
+    let currentLocationControlDiv = document.createElement('div');
+    currentLocationControlDiv.id = 'currentLocationControl';
+    currentLocationControlDiv.style.marginTop = '10px';
 
-    let buttonDiv = document.createElement('div');
-    buttonDiv.classList.add(CSS_CLASS_BUTTONDIV);
+    let currentLocationButton = document.createElement('button');
+    currentLocationButton.title = 'Display current location';
+    currentLocationButton.classList.add(CSS_CLASS_CURRENT_LOCATION_BUTTON)
+    currentLocationControlDiv.appendChild(currentLocationButton);
+
+    let currentLocationButtonImage = document.createElement('div');
+    currentLocationButtonImage.id = 'currentLocationButtonImage'
+    currentLocationButtonImage.classList.add(CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE);
+    currentLocationButton.appendChild(currentLocationButtonImage);
+
+    currentLocationButton.addEventListener('click', function ()
+    {
+        showLocation = !showLocation;
+        if (showLocation)
+        {
+            ShowCurrentLocation(true)
+        }
+        else
+        {
+            locationMarker.setMap(null);
+            currentLocationButtonImage.style.backgroundPosition = '0 0';
+        }
+    });
+
+    map.controls[google.maps.ControlPosition.RIGHT_TOP].push(currentLocationControlDiv);
+
+    await UpdateMarkers(true);
+
+    let toggleStopsButtonDiv = document.createElement('div');
+    toggleStopsButtonDiv.id = 'toggleStopsButtonDiv';
+    toggleStopsButtonDiv.classList.add(CSS_CLASS_BUTTONDIV);
 
     response = await fetch('route-data');
     if (response.ok)
@@ -88,16 +128,16 @@ async function initMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
-            const newButton = document.createElement('button');
-            newButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
-            newButton.style.backgroundColor = '#' + route.routeColor;
-            newButton.id = route.routeShortName;
-            newButton.classList.add(CSS_CLASS_BUTTON);
-            newButton.addEventListener('click', async () => await ToggleRoute(route));
-            buttonDiv.appendChild(newButton);
+            const toggleStopsButton = document.createElement('button');
+            toggleStopsButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
+            toggleStopsButton.style.backgroundColor = '#' + route.routeColor;
+            toggleStopsButton.id = route.routeShortName;
+            toggleStopsButton.classList.add(CSS_CLASS_BUTTON);
+            toggleStopsButton.addEventListener('click', async () => await ToggleRoute(route));
+            toggleStopsButtonDiv.appendChild(toggleStopsButton);
         });
         
-        map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(buttonDiv);
+        map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(toggleStopsButtonDiv);
         loading = false;
     }
     response = await fetch('alerts');
@@ -112,7 +152,47 @@ async function initMap()
     }
 }
 
-async function UpdateBusPositionMarkers(fetchNewData)
+function ShowCurrentLocation(setMapCenter)
+{
+    document.getElementById('currentLocationButtonImage').style.backgroundPosition = '0 0';
+    
+    if (locationMarker)
+    {
+        locationMarker.setMap(null);
+    }
+
+    if (navigator.geolocation)
+    {
+        navigator.geolocation.getCurrentPosition(position =>
+        {
+            let pos =
+            {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            
+            locationMarker = new google.maps.Marker(
+            {
+                position: pos,
+                map: map,
+                icon:
+                {
+                    url: 'current_location.png'
+                }
+            });
+            
+            if (setMapCenter)
+            {
+                map.setCenter(pos);
+                map.setZoom(16);
+            }
+            
+            document.getElementById('currentLocationButtonImage').style.backgroundPosition = (-30 * 9) + 'px 0';
+        });
+    }
+}
+
+async function UpdateMarkers(fetchNewData)
 {
     if (fetchNewData)
     {
@@ -157,6 +237,12 @@ async function UpdateBusPositionMarkers(fetchNewData)
             }));
         }
     });
+    
+    if (showLocation)
+    {
+        locationMarker.setMap(null);
+        ShowCurrentLocation(false);
+    }
 }
 
 setInterval(async function()
@@ -164,7 +250,7 @@ setInterval(async function()
     secCount--;
     if (secCount == 0)
     {
-        await UpdateBusPositionMarkers(true);
+        await UpdateMarkers(true);
         secCount = UPDATE_INTERVAL_SEC;
     }
     
@@ -242,7 +328,7 @@ async function ToggleRoute(route)
         btn.classList.remove(CSS_CLASS_SELECTED);
     }
     
-    await UpdateBusPositionMarkers(false);
+    await UpdateMarkers(false);
 }
 
 function ToggleStops()
@@ -281,26 +367,23 @@ function DisplayStops(route)
 
     route.routeStops.forEach(stop => 
     {
-        const marker = new google.maps.Marker(
+        let marker = new google.maps.Marker(
         {
             position: { lat: stop.stopLat, lng: stop.stopLon },
             map,
             icon: 'marker.png',
         });
 
-        const infowindow = new google.maps.InfoWindow(
+        let infoWindow = new google.maps.InfoWindow(
         {
             content: '<h1 style="font-size:17px">' + stop.stopName +'</h1>',
         });            
 
-        map.addListener('click', function() 
-        {
-            if (infowindow) infowindow.close();
-        });
-
         marker.addListener('click', () => 
         {
-            infowindow.open(
+            stopInfoWindows.push(infoWindow);
+
+            infoWindow.open(
             {
                 anchor: marker,
                 map,
@@ -311,6 +394,34 @@ function DisplayStops(route)
     });
 
     displayedStops.push(stopObj);
+}
+
+function MapClick()
+{
+    console.log(stopInfoWindows)
+    if (stopInfoWindows.length != 0)
+    {
+        stopInfoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
+        stopInfoWindows = [];
+    }
+    else
+    {
+        showControls = !showControls;
+        if (showControls)
+        {
+            document.getElementById('countdownDiv').classList.remove('hidden');
+            document.getElementById('toggleStopsButtonDiv').classList.remove('hidden');
+            document.getElementById('currentLocationControl').classList.remove('hidden');
+            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+        }
+        else
+        {
+            document.getElementById('countdownDiv').classList.add('hidden');
+            document.getElementById('toggleStopsButtonDiv').classList.add('hidden');
+            document.getElementById('currentLocationControl').classList.add('hidden');
+            map.setOptions({mapTypeControl: false, zoomControl: false, fullscreenControl: false});
+        }
+    }
 }
 
 function CompareRoutes(routeA, routeB)
