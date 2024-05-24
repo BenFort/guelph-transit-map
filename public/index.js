@@ -4,10 +4,14 @@ const CSS_CLASS_BUTTONDIV = 'buttonDiv';
 const CSS_CLASS_BUTTON = 'button';
 const CSS_CLASS_TOGGLE_STOPS_BUTTON = 'toggleStopsButton';
 const CSS_CLASS_BUTTON_ACTIVE = 'toggleStopsButtonActive';
+const CSS_CLASS_CURRENT_LOCATION_BUTTON = 'currentLocationButton';
+const CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE = 'currentLocationButtonImage';
 const UPDATE_INTERVAL_SEC = 31;
 
 let map;
 let showStops = false;
+let showLocation = false;
+let locationMarker;
 let busPositionMarkers = [];
 let displayedRoutes = [];
 let displayedStops = [];
@@ -76,10 +80,39 @@ async function initMap()
     
     map.controls[google.maps.ControlPosition.TOP_LEFT].push(countdownDiv);
 
-    await UpdateBusPositionMarkers(true);
+    let currentLocationControlDiv = document.createElement('div');
+    currentLocationControlDiv.style.marginTop = '10px';
 
-    let buttonDiv = document.createElement('div');
-    buttonDiv.classList.add(CSS_CLASS_BUTTONDIV);
+    let currentLocationButton = document.createElement('button');
+    currentLocationButton.title = 'Display current location';
+    currentLocationButton.classList.add(CSS_CLASS_CURRENT_LOCATION_BUTTON)
+    currentLocationControlDiv.appendChild(currentLocationButton);
+
+    let currentLocationButtonImage = document.createElement('div');
+    currentLocationButtonImage.id = 'currentLocationButtonImage'
+    currentLocationButtonImage.classList.add(CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE);
+    currentLocationButton.appendChild(currentLocationButtonImage);
+
+    currentLocationButton.addEventListener('click', function ()
+    {
+        showLocation = !showLocation;
+        if (showLocation)
+        {
+            ShowCurrentLocation()
+        }
+        else
+        {
+            locationMarker.setMap(null);
+            currentLocationButtonImage.style.backgroundPosition = '0 0';
+        }
+    });
+
+    map.controls[google.maps.ControlPosition.RIGHT_TOP].push(currentLocationControlDiv);
+
+    await UpdateMarkers(true);
+
+    let toggleStopsButtonDiv = document.createElement('div');
+    toggleStopsButtonDiv.classList.add(CSS_CLASS_BUTTONDIV);
 
     response = await fetch('route-data');
     if (response.ok)
@@ -88,21 +121,48 @@ async function initMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
-            const newButton = document.createElement('button');
-            newButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
-            newButton.style.backgroundColor = '#' + route.routeColor;
-            newButton.id = route.routeShortName;
-            newButton.classList.add(CSS_CLASS_BUTTON);
-            newButton.addEventListener('click', async () => await ToggleRoute(route));
-            buttonDiv.appendChild(newButton);
+            const toggleStopsButton = document.createElement('button');
+            toggleStopsButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
+            toggleStopsButton.style.backgroundColor = '#' + route.routeColor;
+            toggleStopsButton.id = route.routeShortName;
+            toggleStopsButton.classList.add(CSS_CLASS_BUTTON);
+            toggleStopsButton.addEventListener('click', async () => await ToggleRoute(route));
+            toggleStopsButtonDiv.appendChild(toggleStopsButton);
         });
         
-        map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(buttonDiv);
+        map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(toggleStopsButtonDiv);
         loading = false;
     }
 }
 
-async function UpdateBusPositionMarkers(fetchNewData)
+function ShowCurrentLocation()
+{
+    document.getElementById('currentLocationButtonImage').style.backgroundPosition = '0 0';
+
+    if (navigator.geolocation)
+    {
+        navigator.geolocation.getCurrentPosition(position =>
+        {
+            locationMarker = new google.maps.Marker(
+            {
+                position:
+                {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                },
+                map: map,
+                icon:
+                {
+                    url: 'current_location.png'
+                }
+            });
+            
+            document.getElementById('currentLocationButtonImage').style.backgroundPosition = (-30 * 9) + 'px 0';
+        });
+    }
+}
+
+async function UpdateMarkers(fetchNewData)
 {
     if (fetchNewData)
     {
@@ -147,6 +207,12 @@ async function UpdateBusPositionMarkers(fetchNewData)
             }));
         }
     });
+    
+    if (showLocation)
+    {
+        locationMarker.setMap(null);
+        ShowCurrentLocation();
+    }
 }
 
 setInterval(async function()
@@ -154,7 +220,7 @@ setInterval(async function()
     secCount--;
     if (secCount == 0)
     {
-        await UpdateBusPositionMarkers(true);
+        await UpdateMarkers(true);
         secCount = UPDATE_INTERVAL_SEC;
     }
     
@@ -232,7 +298,7 @@ async function ToggleRoute(route)
         btn.classList.remove(CSS_CLASS_SELECTED);
     }
     
-    await UpdateBusPositionMarkers(false);
+    await UpdateMarkers(false);
 }
 
 function ToggleStops()
