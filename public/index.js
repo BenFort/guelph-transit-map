@@ -138,6 +138,11 @@ async function initMap()
 function ShowCurrentLocation(setMapCenter)
 {
     document.getElementById('currentLocationButtonImage').style.backgroundPosition = '0 0';
+    
+    if (locationMarker)
+    {
+        locationMarker.setMap(null);
+    }
 
     if (navigator.geolocation)
     {
