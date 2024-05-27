@@ -186,7 +186,7 @@ app.get('/route-data', function (req, res)
         routeStopIds.forEach(stopId =>
         {
             let stop = stops.find(stop => stop.stop_id == stopId);
-            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon) });
+            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon), stopId: stop.stop_id});
         });
 
         result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
