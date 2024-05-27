@@ -9,6 +9,9 @@ let shapes = [];
 let stops = [];
 let stopTimes = [];
 
+let root = protobuf.loadSync('gtfs-realtime.proto');
+let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
+
 const app = express();
 
 app.use(express.static('public'));
@@ -81,10 +84,6 @@ app.get('/bus-positions', async function (req, res)
     {
         let responseData = await response.arrayBuffer();
         
-        let root = protobuf.loadSync('gtfs-realtime.proto');
-            
-        let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
-        
         let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(responseData)));
         
         let vehicles = [];
@@ -104,10 +103,6 @@ app.get('/alerts', async function (req, res)
     if (response.ok)
     {
         let responseData = await response.arrayBuffer();
-        
-        let root = protobuf.loadSync('gtfs-realtime.proto');
-            
-        let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
         
         let message = FeedMessage.decode(new Uint8Array(responseData));
 
@@ -189,7 +184,7 @@ app.get('/route-data', function (req, res)
             routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon), stopId: stop.stop_id});
         });
 
-        result.push({ routeId: Number(route.route_id), routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
+        result.push({ routeId: route.route_id, routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
     });
     
     res.json(result);

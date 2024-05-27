@@ -56,7 +56,7 @@ p
     overflow-y: scroll;
 }
 
-.toggleStopsButton
+.toggleButton
 {
     background-color: #fff;
     border: 2px solid #fff;
@@ -72,7 +72,7 @@ p
     text-align: center;
 }
 
-.toggleStopsButtonActive
+.toggleButtonActive
 {
     border: 2px solid #d3d2d2;
     background-color: #d3d2d2;
