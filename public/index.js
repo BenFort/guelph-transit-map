@@ -411,9 +411,10 @@ function ToggleStops()
     }
 }
 
-function ToggleAlerts(){
+function ToggleAlerts()
+{
     MapClick();
-    
+
     let alertsDiv = document.getElementById('alertsDiv');
     if(alertsDiv.hidden)
     {
