@@ -181,7 +181,6 @@ async function initMap()
                 alertActivePeriod.innerText =  'Active from: ' + alert.activePeriod.start + ' - ' + alert.activePeriod.end;
                 alertsDiv.appendChild(alertActivePeriod);
                 alertsDiv.appendChild(document.createElement('br'));
-                alertsDiv.appendChild(document.createElement('br'));
 
                 let affectedRoutes = document.createElement('h4');
                 affectedRoutes.innerText =  'Affected Routes / Stops:';
@@ -198,7 +197,6 @@ async function initMap()
                     alertsDiv.appendChild(affectedRouteText);
                 });
 
-                alertsDiv.appendChild(document.createElement('br'));
                 alertsDiv.appendChild(document.createElement('hr'));
             });
             map.controls[google.maps.ControlPosition.CENTER].push(alertsDiv);

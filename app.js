@@ -12,6 +12,13 @@ let stopTimes = [];
 let root = protobuf.loadSync('gtfs-realtime.proto');
 let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
 
+let DateFormatter = new Intl.DateTimeFormat(
+    undefined,
+    {
+        dateStyle: 'medium',
+        timeStyle: 'short'
+    });
+
 const app = express();
 
 app.use(express.static('public'));
@@ -41,26 +48,11 @@ async function UpdateArrays()
     }
 }
 
-function UnixTimestampConverter(timestamp)
+function ConvertUnixTimestampToString(timestampSeconds)
 {
-    let dateObj = new Date(timestamp * 1000);
-    let months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    let year = dateObj.getFullYear();
-    let month = months[dateObj.getMonth()];
-    let date = dateObj.getDate();
+    let dateObj = new Date(timestampSeconds * 1000); // Dates use milliseconds in constructor
 
-    let hour = dateObj.getHours();
-    hour = hour <=9 ? `0${hour}` : hour;
-
-    let min = dateObj.getMinutes();
-    min = min <=9 ? `0${min}` : min;
-
-    let sec = dateObj.getSeconds();
-    sec = sec <=9 ? `0${sec}` : sec;
-
-    let converted = date + ' ' + month + ' ' + year + ' ' + hour + ':' + min + '.' + sec ;
-
-    return converted;
+    return DateFormatter.format(dateObj);
 }
 
 async function GetRouteName(routeId)
@@ -117,17 +109,15 @@ app.get('/alerts', async function (req, res)
         {
             let activePeriod =
             {
-                start: UnixTimestampConverter(object.entity[entityIndex].alert.activePeriod[0].start.low),
-                end: UnixTimestampConverter(object.entity[entityIndex].alert.activePeriod[0].end.low)
+                start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start.low),
+                end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end.low)
             };
 
             let alert =
             {
-                alertID: object.entity[entityIndex].id,
                 activePeriod: activePeriod,
                 affectedRoutes: object.entity[entityIndex].alert.informedEntity,
                 alertType: object.entity[entityIndex].alert.effect,
-                headerText: object.entity[entityIndex].alert.headerText.translation[0].text,
                 descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
             }
             alerts.push(alert);
