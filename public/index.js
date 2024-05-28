@@ -56,7 +56,8 @@ async function initMap()
         },
         zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
         streetViewControl: false,
-        styles: styles['hide']
+        styles: styles['hide'],
+        controlSize: 60
     });
 
     map.addListener('click', MapClick);
@@ -89,7 +90,7 @@ async function initMap()
 
     let currentLocationControlDiv = document.createElement('div');
     currentLocationControlDiv.id = 'currentLocationControl';
-    currentLocationControlDiv.style.marginTop = '10px';
+    currentLocationControlDiv.style.marginTop = '15px';
 
     let currentLocationButton = document.createElement('button');
     currentLocationButton.title = 'Display current location';
