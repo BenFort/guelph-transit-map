@@ -240,7 +240,7 @@ function ShowCurrentLocation(setMapCenter)
                 map.setZoom(16);
             }
             
-            document.getElementById('currentLocationButtonImage').style.backgroundPosition = (-30 * 9) + 'px 0';
+            document.getElementById('currentLocationButtonImage').style.backgroundPosition = (-45 * 9) + 'px 0';
         });
     }
 }
