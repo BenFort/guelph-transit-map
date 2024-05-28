@@ -1,11 +1,13 @@
 const CSS_CLASS_SELECTED = 'selected';
 const CSS_CLASS_ROUNDCORNERS = 'rcorners';
 const CSS_CLASS_BUTTONDIV = 'buttonDiv';
+const CSS_CLASS_ALERTSDIV = 'alertsDiv';
 const CSS_CLASS_BUTTON = 'button';
-const CSS_CLASS_TOGGLE_STOPS_BUTTON = 'toggleStopsButton';
-const CSS_CLASS_BUTTON_ACTIVE = 'toggleStopsButtonActive';
+const CSS_CLASS_TOGGLE_BUTTON = 'toggleButton';
+const CSS_CLASS_TOGGLE_BUTTON_ACTIVE = 'toggleButtonActive';
 const CSS_CLASS_CURRENT_LOCATION_BUTTON = 'currentLocationButton';
 const CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE = 'currentLocationButtonImage';
+const CSS_CLASS_ALERTS_CLOSE_BUTTON = 'alertsCloseButton';
 const UPDATE_INTERVAL_SEC = 31;
 
 let map;
@@ -79,7 +81,7 @@ async function initMap()
     let toggleStopsButton = document.createElement('button');
     toggleStopsButton.id = 'toggleStopsButton'
     toggleStopsButton.textContent = 'Show/Hide Bus Stops'
-    toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_STOPS_BUTTON);
+    toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_BUTTON);
     toggleStopsButton.addEventListener('click', ToggleStops);
     countdownDiv.appendChild(toggleStopsButton);
     
@@ -139,6 +141,68 @@ async function initMap()
         
         map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push(toggleStopsButtonDiv);
         loading = false;
+
+        let toggleAlertsButton = document.createElement('button');
+        toggleAlertsButton.id = 'toggleAlertsButton';
+        toggleAlertsButton.textContent = 'View Alerts';
+        toggleAlertsButton.classList.add(CSS_CLASS_TOGGLE_BUTTON);
+        toggleAlertsButton.addEventListener('click', ToggleAlerts);
+        countdownDiv.appendChild(toggleAlertsButton);
+
+        let alertsDiv = document.createElement('div');
+        alertsDiv.id = 'alertsDiv';
+        alertsDiv.classList.add(CSS_CLASS_ALERTSDIV);
+
+        let alertsCloseButton = document.createElement('button');
+        alertsCloseButton.id = 'alertsCloseButton';
+        alertsCloseButton.textContent = 'X';
+        alertsCloseButton.addEventListener('click', ToggleAlerts);
+        alertsCloseButton.classList.add(CSS_CLASS_ALERTS_CLOSE_BUTTON);
+        alertsDiv.appendChild(alertsCloseButton);
+        alertsDiv.hidden = true;
+        
+        response = await fetch('alerts');
+        if (response.ok)
+        {
+            let alerts = await response.json();
+            alerts.forEach(alert =>
+            {
+                let alertType = document.createElement('h1');
+                alertType.innerText =  alert.alertType + ":";
+                alertsDiv.appendChild(alertType);
+                alertsDiv.appendChild(document.createElement('br'));
+
+                let alertText= document.createElement('h2');
+                alertText.innerText =  alert.descriptionText;
+                alertsDiv.appendChild(alertText);
+                alertsDiv.appendChild(document.createElement('br'));
+
+                let alertActivePeriod = document.createElement('p');
+                alertActivePeriod.innerText =  "Active from: " + alert.activePeriod.start + " To: " + alert.activePeriod.end;
+                alertsDiv.appendChild(alertActivePeriod);
+                alertsDiv.appendChild(document.createElement('br'));
+                alertsDiv.appendChild(document.createElement('br'));
+
+                let affectedRoutes = document.createElement('h4');
+                affectedRoutes.innerText =  "Affected Routes / Stops:";
+                alertsDiv.appendChild(affectedRoutes);
+                alertsDiv.appendChild(document.createElement('br'));
+
+                alert.affectedRoutes.forEach(affectedIdPair =>
+                {
+                    let affectedRoute = routes.find(route => route.routeId === affectedIdPair.routeId)
+                    let affectedStop = affectedRoute.routeStops.find(routeStop => routeStop.stopId === affectedIdPair.stopId)
+
+                    let affectedRouteText = document.createElement('p');
+                    affectedRouteText.innerText = "  " + affectedRoute.routeShortName + ": " + affectedStop.stopName;
+                    alertsDiv.appendChild(affectedRouteText);
+                });
+
+                alertsDiv.appendChild(document.createElement('br'));
+                alertsDiv.appendChild(document.createElement('hr'));
+            });
+            map.controls[google.maps.ControlPosition.CENTER].push(alertsDiv);
+        }
     }
 }
 
@@ -328,7 +392,7 @@ function ToggleStops()
 
     if(showStops)
     {
-        toggleStopsButton.classList.add(CSS_CLASS_BUTTON_ACTIVE);
+        toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
         
         displayedRoutes.forEach(displayedRoute =>
         {
@@ -337,13 +401,28 @@ function ToggleStops()
     }
     else
     {
-        toggleStopsButton.classList.remove(CSS_CLASS_BUTTON_ACTIVE);
+        toggleStopsButton.classList.remove(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
         
         displayedStops.forEach(displayedStop =>
         {
             displayedStop.stops.forEach(stop => stop.setMap(null));
         });
         displayedStops = [];
+    }
+}
+
+function ToggleAlerts()
+{
+    ToggleMapControls();
+
+    let alertsDiv = document.getElementById('alertsDiv');
+    if(alertsDiv.hidden)
+    {
+        alertsDiv.hidden = false;
+    }
+    else
+    {
+        alertsDiv.hidden = true;
     }
 }
 
@@ -388,7 +467,6 @@ function DisplayStops(route)
 
 function MapClick()
 {
-    console.log(stopInfoWindows)
     if (stopInfoWindows.length != 0)
     {
         stopInfoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
@@ -396,21 +474,26 @@ function MapClick()
     }
     else
     {
-        showControls = !showControls;
-        if (showControls)
-        {
-            document.getElementById('countdownDiv').classList.remove('hidden');
-            document.getElementById('toggleStopsButtonDiv').classList.remove('hidden');
-            document.getElementById('currentLocationControl').classList.remove('hidden');
-            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
-        }
-        else
-        {
-            document.getElementById('countdownDiv').classList.add('hidden');
-            document.getElementById('toggleStopsButtonDiv').classList.add('hidden');
-            document.getElementById('currentLocationControl').classList.add('hidden');
-            map.setOptions({mapTypeControl: false, zoomControl: false, fullscreenControl: false});
-        }
+        ToggleMapControls();
+    }
+}
+
+function ToggleMapControls()
+{
+    showControls = !showControls;
+    if (showControls)
+    {
+        document.getElementById('countdownDiv').classList.remove('hidden');
+        document.getElementById('toggleStopsButtonDiv').classList.remove('hidden');
+        document.getElementById('currentLocationControl').classList.remove('hidden');
+        map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+    }
+    else
+    {
+        document.getElementById('countdownDiv').classList.add('hidden');
+        document.getElementById('toggleStopsButtonDiv').classList.add('hidden');
+        document.getElementById('currentLocationControl').classList.add('hidden');
+        map.setOptions({mapTypeControl: false, zoomControl: false, fullscreenControl: false});
     }
 }
 
