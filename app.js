@@ -185,3 +185,8 @@ app.listen(8081, async function()
 {
     await UpdateArrays();
 });
+
+setInterval(async function()
+{
+    await UpdateArrays();
+}, 1000 * 60 * 60 * 24);
