@@ -121,13 +121,14 @@ app.get('/alerts', async function (req, res)
                 end: UnixTimestampConverter(object.entity[entityIndex].alert.activePeriod[0].end.low)
             };
 
-            let alert = {
+            let alert =
+            {
                 alertID: object.entity[entityIndex].id,
                 activePeriod: activePeriod,
                 affectedRoutes: object.entity[entityIndex].alert.informedEntity,
                 alertType: object.entity[entityIndex].alert.effect,
                 headerText: object.entity[entityIndex].alert.headerText.translation[0].text,
-                descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text,
+                descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
             }
             alerts.push(alert);
         }
@@ -181,7 +182,7 @@ app.get('/route-data', function (req, res)
         routeStopIds.forEach(stopId =>
         {
             let stop = stops.find(stop => stop.stop_id == stopId);
-            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon), stopId: stop.stop_id});
+            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon), stopId: stop.stop_id });
         });
 
         result.push({ routeId: route.route_id, routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });

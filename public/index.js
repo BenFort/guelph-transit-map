@@ -168,7 +168,7 @@ async function initMap()
             alerts.forEach(alert =>
             {
                 let alertType = document.createElement('h1');
-                alertType.innerText =  alert.alertType + ":";
+                alertType.innerText =  alert.alertType + ':';
                 alertsDiv.appendChild(alertType);
                 alertsDiv.appendChild(document.createElement('br'));
 
@@ -178,13 +178,13 @@ async function initMap()
                 alertsDiv.appendChild(document.createElement('br'));
 
                 let alertActivePeriod = document.createElement('p');
-                alertActivePeriod.innerText =  "Active from: " + alert.activePeriod.start + " To: " + alert.activePeriod.end;
+                alertActivePeriod.innerText =  'Active from: ' + alert.activePeriod.start + ' - ' + alert.activePeriod.end;
                 alertsDiv.appendChild(alertActivePeriod);
                 alertsDiv.appendChild(document.createElement('br'));
                 alertsDiv.appendChild(document.createElement('br'));
 
                 let affectedRoutes = document.createElement('h4');
-                affectedRoutes.innerText =  "Affected Routes / Stops:";
+                affectedRoutes.innerText =  'Affected Routes / Stops:';
                 alertsDiv.appendChild(affectedRoutes);
                 alertsDiv.appendChild(document.createElement('br'));
 
@@ -194,7 +194,7 @@ async function initMap()
                     let affectedStop = affectedRoute.routeStops.find(routeStop => routeStop.stopId === affectedIdPair.stopId)
 
                     let affectedRouteText = document.createElement('p');
-                    affectedRouteText.innerText = "  " + affectedRoute.routeShortName + ": " + affectedStop.stopName;
+                    affectedRouteText.innerText = '  ' + affectedRoute.routeShortName + ': ' + affectedStop.stopName;
                     alertsDiv.appendChild(affectedRouteText);
                 });
 
@@ -394,19 +394,13 @@ function ToggleStops()
     {
         toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
         
-        displayedRoutes.forEach(displayedRoute =>
-        {
-            DisplayStops(displayedRoute.route);
-        });
+        displayedRoutes.forEach(displayedRoute => DisplayStops(displayedRoute.route));
     }
     else
     {
         toggleStopsButton.classList.remove(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
         
-        displayedStops.forEach(displayedStop =>
-        {
-            displayedStop.stops.forEach(stop => stop.setMap(null));
-        });
+        displayedStops.forEach(displayedStop => displayedStop.stops.forEach(stop => stop.setMap(null)));
         displayedStops = [];
     }
 }
