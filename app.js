@@ -95,7 +95,8 @@ app.get('/alerts', async function (req, res)
     {
         let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await response.arrayBuffer())), 
         {
-            enums: String
+            enums: String,
+            longs: Number
         });
 
         let alerts = [];
@@ -104,8 +105,8 @@ app.get('/alerts', async function (req, res)
         {
             let activePeriod =
             {
-                start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start.low),
-                end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end.low)
+                start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start),
+                end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
             };
 
             let alert =
