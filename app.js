@@ -112,7 +112,7 @@ app.get('/alerts', async function (req, res)
             let alert =
             {
                 activePeriod: activePeriod,
-                affectedRoutes: object.entity[entityIndex].alert.informedEntity,
+                affectedIdPairs: object.entity[entityIndex].alert.informedEntity,
                 alertType: object.entity[entityIndex].alert.effect,
                 descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
             }

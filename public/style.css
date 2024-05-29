@@ -31,12 +31,15 @@ p
     color: white;
     font-size: 25px;
     margin: 6px;
-    height: 70;
-    width: 250;
+    height: 70px;
+    width: 250px;
 }
 
 .buttonDiv
 {
+    margin-left: 9%;
+    margin-right: 9%;
+    width: 82%;
     margin-bottom: 10px;
     overflow-y: scroll;
     max-height: 358px;
