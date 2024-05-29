@@ -24,7 +24,7 @@ let loading = true;
 let secCount = UPDATE_INTERVAL_SEC;
 let showControls = true;
 
-async function initMap()
+async function InitializeMap()
 {
     const styles =
     {
