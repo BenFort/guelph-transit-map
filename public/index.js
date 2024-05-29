@@ -129,11 +129,10 @@ async function initMap()
     routeToggleButtonsDiv.id = 'routeToggleButtonsDiv';
     routeToggleButtonsDiv.classList.add(CSS_CLASS_BUTTONDIV);
 
-    let routes = [];
     let routeDataResponse = await fetch('route-data');
     if (routeDataResponse.ok)
     {
-        routes = await routeDataResponse.json();
+        let routes = await routeDataResponse.json();
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
@@ -191,14 +190,11 @@ async function initMap()
             
             alertsDiv.appendChild(document.createElement('br'));
 
-            alert.affectedIdPairs.forEach(affectedIdPair =>
+            alert.routeAndStopInfo.forEach(info =>
             {
-                let affectedRoute = routes.find(route => route.routeId === affectedIdPair.routeId)
-                let affectedStop = affectedRoute.routeStops.find(routeStop => routeStop.stopId === affectedIdPair.stopId)
-
-                let affectedRouteText = document.createElement('p');
-                affectedRouteText.innerText = '  ' + affectedRoute.routeShortName + ': ' + affectedStop.stopName;
-                alertsDiv.appendChild(affectedRouteText);
+                let affectedRouteAndStopText = document.createElement('p');
+                affectedRouteAndStopText.innerText = '  ' + info.routeShortName + ': ' + info.stopName;
+                alertsDiv.appendChild(affectedRouteAndStopText);
             });
 
             alertsDiv.appendChild(document.createElement('hr'));

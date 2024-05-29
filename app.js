@@ -72,16 +72,16 @@ async function GetRouteName(routeId)
 
 app.get('/bus-positions', async function (req, res)
 {
-    let response = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb');
-    if (response.ok)
+    let vehiclePositionsResponse = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb');
+    if (vehiclePositionsResponse.ok)
     {
-        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await response.arrayBuffer())));
+        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await vehiclePositionsResponse.arrayBuffer())));
         
         let vehicles = [];
                 
         for (let entityIndex in object.entity)
         {
-            vehicles.push({ 'routeShortName': await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), 'position': object.entity[entityIndex].vehicle.position });
+            vehicles.push({ routeShortName: await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), position: object.entity[entityIndex].vehicle.position });
         }
 
         res.json(vehicles);
@@ -90,10 +90,10 @@ app.get('/bus-positions', async function (req, res)
 
 app.get('/alerts', async function (req, res)
 {
-    let response = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/alert/alerts.pb');
-    if (response.ok)
+    let alertsResponse = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/alert/alerts.pb');
+    if (alertsResponse.ok)
     {
-        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await response.arrayBuffer())), 
+        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await alertsResponse.arrayBuffer())), 
         {
             enums: String,
             longs: Number
@@ -109,14 +109,26 @@ app.get('/alerts', async function (req, res)
                 end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
             };
 
-            let alert =
+            let routeAndStopInfo = [];
+            object.entity[entityIndex].alert.informedEntity.forEach(idPair =>
+            {
+                let affectedRoute = routes.find(route => route.route_id === idPair.routeId);
+                let affectedStop = stops.find(stop => stop.stop_id === idPair.stopId);
+
+                routeAndStopInfo.push(
+                {
+                    routeShortName: affectedRoute.route_short_name,
+                    stopName: affectedStop.stop_name
+                });
+            });
+            
+            alerts.push(
             {
                 activePeriod: activePeriod,
-                affectedIdPairs: object.entity[entityIndex].alert.informedEntity,
+                routeAndStopInfo: routeAndStopInfo,
                 alertType: object.entity[entityIndex].alert.effect,
                 descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
-            }
-            alerts.push(alert);
+            });
         }
         res.json(alerts);
     }
