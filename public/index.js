@@ -369,13 +369,13 @@ async function ToggleRoute(route)
     }
     else
     {
-        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.route.routeId == route.routeId);
+        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.route.routeId === route.routeId);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
 
         if(showStops)
         {
-            let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeId == route.routeId);
+            let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeId === route.routeId);
             displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
             displayedStops.splice(displayedStopIndex, 1);
         }
@@ -462,7 +462,7 @@ function DisplayStops(route)
 
 function MapClick()
 {
-    if (stopInfoWindows.length != 0)
+    if (stopInfoWindows.length !== 0)
     {
         stopInfoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
         stopInfoWindows = [];
@@ -497,15 +497,15 @@ function CompareRoutes(routeA, routeB)
     let routeA_num = Number(routeA.routeShortName);
     let routeB_num = Number(routeB.routeShortName);
     
-    if (routeA_num == 99)
+    if (routeA_num === 99)
     {
         return Number.MIN_SAFE_INTEGER;
     }
-    else if (routeB_num == 99)
+    else if (routeB_num === 99)
     {
         return Number.MAX_SAFE_INTEGER;
     }
-    else if (routeA_num != NaN && routeB_num != NaN)
+    else if (routeA_num !== NaN && routeB_num !== NaN)
     {
         return routeA_num - routeB_num;
     }

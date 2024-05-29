@@ -32,19 +32,19 @@ async function UpdateArrays()
         let responseData = await response.arrayBuffer();
         let unzippedFileBuffer = await unzipper.Open.buffer(Buffer.from(responseData));
         
-        let routesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'routes.txt').buffer();
+        let routesFileBuffer = await unzippedFileBuffer.files.find(x => x.path === 'routes.txt').buffer();
         routes = parse(routesFileBuffer.toString(), { columns: true });
 
-        let tripsFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'trips.txt').buffer();
+        let tripsFileBuffer = await unzippedFileBuffer.files.find(x => x.path === 'trips.txt').buffer();
         trips = parse(tripsFileBuffer.toString(), { columns: true });
                 
-        let shapesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'shapes.txt').buffer();
+        let shapesFileBuffer = await unzippedFileBuffer.files.find(x => x.path === 'shapes.txt').buffer();
         shapes = parse(shapesFileBuffer.toString(), { columns: true });
 
-        let stopsFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'stops.txt').buffer();
+        let stopsFileBuffer = await unzippedFileBuffer.files.find(x => x.path === 'stops.txt').buffer();
         stops = parse(stopsFileBuffer.toString(), { columns: true });
 
-        let timesFileBuffer = await unzippedFileBuffer.files.find(x => x.path == 'stop_times.txt').buffer();
+        let timesFileBuffer = await unzippedFileBuffer.files.find(x => x.path === 'stop_times.txt').buffer();
         stopTimes = parse(timesFileBuffer.toString(), { columns: true });
     }
 }
@@ -58,14 +58,14 @@ function ConvertUnixTimestampToString(timestampSeconds)
 
 async function GetRouteName(routeId)
 {
-    let route = routes.find(x => x.route_id == routeId);
+    let route = routes.find(x => x.route_id === routeId);
 
     if (!route)
     {
         await UpdateArrays();
     }
 
-    route = routes.find(x => x.route_id == routeId);
+    route = routes.find(x => x.route_id === routeId);
 
     return route?.route_short_name ?? 'UKNOWN';
 }
@@ -103,28 +103,23 @@ app.get('/alerts', async function (req, res)
 
         for (let entityIndex in object.entity)
         {
-            let activePeriod =
-            {
-                start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start),
-                end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
-            };
-
             let routeAndStopInfo = [];
             object.entity[entityIndex].alert.informedEntity.forEach(idPair =>
             {
-                let affectedRoute = routes.find(route => route.route_id === idPair.routeId);
-                let affectedStop = stops.find(stop => stop.stop_id === idPair.stopId);
-
                 routeAndStopInfo.push(
                 {
-                    routeShortName: affectedRoute.route_short_name,
-                    stopName: affectedStop.stop_name
+                    routeShortName: routes.find(route => route.route_id === idPair.routeId).route_short_name,
+                    stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
                 });
             });
             
             alerts.push(
             {
-                activePeriod: activePeriod,
+                activePeriod:
+                {
+                    start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start),
+                    end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
+                },
                 routeAndStopInfo: routeAndStopInfo,
                 alertType: object.entity[entityIndex].alert.effect,
                 descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
@@ -139,12 +134,12 @@ app.get('/shape-coords-for-route-id', function (req, res)
     let result = [];
     let shapeIds = new Set();
 
-    trips.filter(trip => trip.route_id == req.query.routeId).forEach(trip => shapeIds.add(trip.shape_id));
+    trips.filter(trip => trip.route_id === req.query.routeId).forEach(trip => shapeIds.add(trip.shape_id));
     
     shapeIds.forEach(shapeId =>
     {
         let shapeCoords = [];
-        shapes.filter(shape => shape.shape_id == shapeId).forEach(shape => shapeCoords.push({ lat: Number(shape.shape_pt_lat), lng: Number(shape.shape_pt_lon) }));
+        shapes.filter(shape => shape.shape_id === shapeId).forEach(shape => shapeCoords.push({ lat: Number(shape.shape_pt_lat), lng: Number(shape.shape_pt_lon) }));
         result.push(shapeCoords);
     });
     
@@ -158,7 +153,7 @@ app.get('/route-data', function (req, res)
     
     stopTimes.forEach(stopTime =>
     {
-        let key = stopTime.trip_id.toString();
+        let key = stopTime.trip_id;
         if (!tripIdStopIds[key])
         {
             tripIdStopIds[key] = { stopIds: new Set([stopTime.stop_id]) };
@@ -173,8 +168,8 @@ app.get('/route-data', function (req, res)
     {
         let routeStopIds = new Set();
         trips
-            .filter(trip => trip.route_id == route.route_id)
-            .forEach(trip => tripIdStopIds[trip.trip_id.toString()].stopIds.forEach(stopId => routeStopIds.add(stopId)));
+            .filter(trip => trip.route_id === route.route_id)
+            .forEach(trip => tripIdStopIds[trip.trip_id].stopIds.forEach(stopId => routeStopIds.add(stopId)));
         
         let routeStops = [];
         routeStopIds.forEach(stopId =>
