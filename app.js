@@ -16,7 +16,8 @@ let DateFormatter = new Intl.DateTimeFormat(
     undefined,
     {
         dateStyle: 'medium',
-        timeStyle: 'short'
+        timeStyle: 'short',
+        timeZone: 'America/Toronto'
     });
 
 const app = express();
@@ -74,9 +75,7 @@ app.get('/bus-positions', async function (req, res)
     let response = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb');
     if (response.ok)
     {
-        let responseData = await response.arrayBuffer();
-        
-        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(responseData)));
+        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await response.arrayBuffer())));
         
         let vehicles = [];
                 
@@ -94,15 +93,11 @@ app.get('/alerts', async function (req, res)
     let response = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/alert/alerts.pb');
     if (response.ok)
     {
-        let responseData = await response.arrayBuffer();
-        
-        let message = FeedMessage.decode(new Uint8Array(responseData));
-
-        let object = FeedMessage.toObject(message, 
+        let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await response.arrayBuffer())), 
         {
             enums: String
         });
-        
+
         let alerts = [];
 
         for (let entityIndex in object.entity)
