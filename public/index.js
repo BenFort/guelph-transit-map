@@ -282,7 +282,9 @@ async function UpdateMarkers(fetchNewData)
                 {
                     text: bus.routeShortName,
                     fontWeight: 'bold',
-                    fontSize: bus.routeShortName.length > 2 ? '10px' : '17px'
+                    fontSize: bus.routeShortName.length > 2 ? '10px' : '17px',
+                    color: bus.routeColour
+                    
                 },
                 icon:
                 {
