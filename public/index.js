@@ -258,7 +258,7 @@ function getBusIconData(bearing)
         labelOrigin = new google.maps.Point(15, 19);
     }
     //NorthEast
-    if (22.5 < bearing && bearing <= 67.5) {
+    else if (22.5 < bearing && bearing <= 67.5) {
         iconUrl = 'bus-northeast.png';
         labelOrigin = new google.maps.Point(15, 16);
     }
