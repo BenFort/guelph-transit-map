@@ -67,7 +67,7 @@ async function GetRouteData(routeId)
 
     route = routes.find(x => x.route_id === routeId);
 
-    return {routeName: route?.route_short_name ?? '?', routeColour: route?.route_color?? '000000'};
+    return { routeName: route?.route_short_name ?? '?', routeColour: route?.route_color ?? '000000' };
 }
 
 app.get('/bus-positions', async function (req, res)

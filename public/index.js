@@ -253,53 +253,63 @@ function getBusIconData(bearing)
     let labelOrigin = new google.maps.Point(15, 12);
 
     //North
-    if (337.5 < bearing || bearing <= 22.5) {
+    if (337.5 < bearing || bearing <= 22.5)
+    {
         iconUrl = 'bus-north.png';
         labelOrigin = new google.maps.Point(15, 19);
     }
-    //NorthEast
-    else if (22.5 < bearing && bearing <= 67.5) {
+    //Northeast
+    else if (22.5 < bearing && bearing <= 67.5)
+    {
         iconUrl = 'bus-northeast.png';
         labelOrigin = new google.maps.Point(15, 16);
     }
     //East
-    else if (67.5 < bearing && bearing <= 112.5) {
+    else if (67.5 < bearing && bearing <= 112.5) 
+    {
         iconUrl = 'bus-east.png';
         labelOrigin = new google.maps.Point(15, 12);
     }
-    //SouthEast
-    else if (112.5 < bearing && bearing <= 157.5) {
+    //Southeast
+    else if (112.5 < bearing && bearing <= 157.5)
+    {
         iconUrl = 'bus-southeast.png';
         labelOrigin = new google.maps.Point(15, 12);
     }
     //South
-    else if (157.5 < bearing && bearing <= 202.5) {
+    else if (157.5 < bearing && bearing <= 202.5)
+    {
         iconUrl = 'bus-south.png';
         labelOrigin = new google.maps.Point(15, 12);
     }
-    //SouthWest
-    else if (202.5 < bearing && bearing <= 247.5) {
+    //Southwest
+    else if (202.5 < bearing && bearing <= 247.5)
+    {
         iconUrl = 'bus-southwest.png';
         labelOrigin = new google.maps.Point(18, 12);
     }
     //West
-    else if (247.5 < bearing && bearing <= 292.5) {
+    else if (247.5 < bearing && bearing <= 292.5)
+    {
         iconUrl = 'bus-west.png';
         labelOrigin = new google.maps.Point(21, 12);
     }
-    //NorthWest
-    else if (292.5 < bearing && bearing <= 337.5) {
+    //Northwest
+    else if (292.5 < bearing && bearing <= 337.5)
+    {
         iconUrl = 'bus-northwest.png';
         labelOrigin = new google.maps.Point(17, 16);
     }
-    else if (bearing === undefined) {
+    else if (bearing === undefined)
+    {
         console.log('Could not determine direction of bus with undefined bearing');
     }
-    else {
+    else
+    {
         console.warn(`Could not determine directional icon for bearing ${bearing}`);
     }
 
-    return {iconUrl: iconUrl, labelOrigin: labelOrigin};
+    return { iconUrl: iconUrl, labelOrigin: labelOrigin };
 }
 
 async function UpdateMarkers(fetchNewData)
