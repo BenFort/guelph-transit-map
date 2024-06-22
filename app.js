@@ -56,7 +56,7 @@ function ConvertUnixTimestampToString(timestampSeconds)
     return DateFormatter.format(dateObj);
 }
 
-async function GetRouteName(routeId)
+async function GetRouteData(routeId)
 {
     let route = routes.find(x => x.route_id === routeId);
 
@@ -67,7 +67,7 @@ async function GetRouteName(routeId)
 
     route = routes.find(x => x.route_id === routeId);
 
-    return route?.route_short_name ?? 'UKNOWN';
+    return {routeName: route?.route_short_name ?? '?', routeColour: route?.route_color?? '000000'};
 }
 
 app.get('/bus-positions', async function (req, res)
@@ -81,7 +81,8 @@ app.get('/bus-positions', async function (req, res)
                 
         for (let entityIndex in object.entity)
         {
-            vehicles.push({ routeShortName: await GetRouteName(object.entity[entityIndex].vehicle.trip.routeId), position: object.entity[entityIndex].vehicle.position });
+            const routeData = await GetRouteData(object.entity[entityIndex].vehicle.trip.routeId);
+            vehicles.push({ routeShortName: routeData.routeName, routeColour: routeData.routeColour, position: object.entity[entityIndex].vehicle.position });
         }
 
         res.json(vehicles);
