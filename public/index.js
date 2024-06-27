@@ -18,7 +18,7 @@ let busPositionMarkers = [];
 let displayedRoutes = [];
 let displayedStops = [];
 let busPositions = [];
-let stopInfoWindows = [];
+let infoWindows = [];
 
 let loading = true;
 let secCount = UPDATE_INTERVAL_SEC;
@@ -337,7 +337,13 @@ async function UpdateMarkers(fetchNewData)
         {
             const busIconData = getBusIconData(bus.position.bearing);
 
-            busPositionMarkers.push(new google.maps.Marker(
+            let labelText = bus.routeShortName;
+            
+            if(labelText == "99"){
+                labelText = labelText + bus.tripHeadsign.split(" ")[2].charAt()
+            }
+
+            let marker = new google.maps.Marker(
             {
                 position:
                 {
@@ -347,9 +353,9 @@ async function UpdateMarkers(fetchNewData)
                 map: map,
                 label:
                 {
-                    text: bus.routeShortName,
+                    text: labelText,
                     fontWeight: 'bold',
-                    fontSize: bus.routeShortName.length > 2 ? '10px' : '17px',
+                    fontSize: labelText.length > 2 ? '10px' : '17px',
                     color: bus.routeColour
                     
                 },
@@ -358,7 +364,29 @@ async function UpdateMarkers(fetchNewData)
                     url: busIconData.iconUrl,
                     labelOrigin: busIconData.labelOrigin
                 }
-            }));
+            });
+
+            let infoWindowText = document.createElement('h1')
+            infoWindowText.innerText =  bus.tripHeadsign;
+            infoWindowText.style = "font-size:17px";
+
+            let infoWindow = new google.maps.InfoWindow(
+            {
+                headerContent: infoWindowText,
+            });    
+
+            marker.addListener('click', () => 
+            {
+                infoWindows.push(infoWindow);
+        
+                infoWindow.open(
+                {
+                    anchor: marker,
+                    map,
+                });
+            });
+
+            busPositionMarkers.push(marker);
         }
     });
     
@@ -507,14 +535,18 @@ function DisplayStops(route)
             icon: 'marker.png',
         });
 
+        let infoWindowText = document.createElement('h1')
+        infoWindowText.innerText =  stop.stopName;
+        infoWindowText.style = "font-size:17px";
+
         let infoWindow = new google.maps.InfoWindow(
         {
-            content: '<h1 style="font-size:17px">' + stop.stopName + '</h1>',
-        });            
+            headerContent: infoWindowText,
+        }); 
 
         marker.addListener('click', () => 
         {
-            stopInfoWindows.push(infoWindow);
+            infoWindows.push(infoWindow);
 
             infoWindow.open(
             {
@@ -531,10 +563,10 @@ function DisplayStops(route)
 
 function MapClick()
 {
-    if (stopInfoWindows.length !== 0)
+    if (infoWindows.length !== 0)
     {
-        stopInfoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
-        stopInfoWindows = [];
+        infoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
+        infoWindows = [];
     }
     else
     {

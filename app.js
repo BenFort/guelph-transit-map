@@ -81,8 +81,10 @@ app.get('/bus-positions', async function (req, res)
                 
         for (let entityIndex in object.entity)
         {
+            let tripHeadsign = trips.find(x => x.trip_id === object.entity[entityIndex].vehicle.trip.tripId).trip_headsign;
+            
             const routeData = await GetRouteData(object.entity[entityIndex].vehicle.trip.routeId);
-            vehicles.push({ routeShortName: routeData.routeName, routeColour: routeData.routeColour, position: object.entity[entityIndex].vehicle.position });
+            vehicles.push({ routeShortName: routeData.routeName, routeColour: routeData.routeColour, position: object.entity[entityIndex].vehicle.position, tripHeadsign: tripHeadsign });
         }
 
         res.json(vehicles);
