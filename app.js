@@ -80,11 +80,19 @@ app.get('/bus-positions', async function (req, res)
         let vehicles = [];
                 
         for (let entityIndex in object.entity)
-        {
-            let tripHeadsign = trips.find(x => x.trip_id === object.entity[entityIndex].vehicle.trip.tripId).trip_headsign;
+        {            
+            let vehicle = object.entity[entityIndex].vehicle;
             
-            const routeData = await GetRouteData(object.entity[entityIndex].vehicle.trip.routeId);
-            vehicles.push({ routeShortName: routeData.routeName, routeColour: routeData.routeColour, position: object.entity[entityIndex].vehicle.position, tripHeadsign: tripHeadsign, tripId: object.entity[entityIndex].vehicle.trip.tripId});
+            const routeData = await GetRouteData(vehicle.trip.routeId);
+            
+            vehicles.push(
+            {
+                routeShortName: routeData.routeName,
+                routeColour: routeData.routeColour,
+                position: vehicle.position,
+                tripHeadsign: trips.find(x => x.trip_id === vehicle.trip.tripId).trip_headsign,
+                tripId: object.entity[entityIndex].vehicle.trip.tripId
+            });
         }
 
         res.json(vehicles);
@@ -118,7 +126,7 @@ app.get('/alerts', async function (req, res)
             
             let descriptionText = object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
 
-            if(descriptionText == '.')
+            if(descriptionText === '.')
             {
                 descriptionText = object.entity[entityIndex].alert.descriptionText.translation[0].text.replace(/[\n\r]/g, ' ');
             }
