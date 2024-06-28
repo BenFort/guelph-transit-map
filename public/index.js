@@ -333,14 +333,15 @@ async function UpdateMarkers(fetchNewData)
 
     busPositions.forEach(bus =>
     {
-        if (selectedBtns.namedItem(bus.routeShortName) || selectedBtns.length == 0)
+        if (selectedBtns.namedItem(bus.routeShortName) || selectedBtns.length === 0)
         {
             const busIconData = getBusIconData(bus.position.bearing);
 
             let labelText = bus.routeShortName;
             
-            if(labelText == "99"){
-                labelText = labelText + bus.tripHeadsign.split(" ")[2].charAt()
+            if(labelText === '99')
+            {
+                labelText += bus.tripHeadsign.split(' ')[2].charAt(0)
             }
 
             let marker = new google.maps.Marker(
@@ -368,7 +369,7 @@ async function UpdateMarkers(fetchNewData)
 
             let infoWindowText = document.createElement('h1')
             infoWindowText.innerText =  bus.tripHeadsign;
-            infoWindowText.style = "font-size:17px";
+            infoWindowText.style = 'font-size:17px';
 
             let infoWindow = new google.maps.InfoWindow(
             {
@@ -400,10 +401,10 @@ async function UpdateMarkers(fetchNewData)
 setInterval(async function()
 {
     secCount--;
-    if (secCount == 0)
+    if (secCount <= 0)
     {
-        await UpdateMarkers(true);
         secCount = UPDATE_INTERVAL_SEC;
+        await UpdateMarkers(true);
     }
     
     if (!loading)
@@ -565,7 +566,7 @@ function MapClick()
 {
     if (infoWindows.length !== 0)
     {
-        infoWindows.forEach(stopInfoWindow => stopInfoWindow.close());
+        infoWindows.forEach(infoWindow => infoWindow.close());
         infoWindows = [];
     }
     else
