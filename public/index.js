@@ -544,15 +544,32 @@ function DisplayStops(route)
             headerContent: infoWindowText,
         }); 
 
-        marker.addListener('click', () => 
+        marker.addListener('click', async () => 
         {
             infoWindows.push(infoWindow);
+
+            let response = await fetch('stop-times-for-stop-id?' + new URLSearchParams({ stopId: stop.stopId, tripId: route.tripId }));
+            let currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+            let stopTimeList = [];
+            let stopTimeString = "";
+    
+            if (response.ok)
+            {
+                stopTimeList = await response.json();
+                stopTimeList.forEach(stopTime =>
+                {
+                    if(stopTime.arrivalTime > currentTime && stopTimeString.split('<br/>').length < 11){
+                        stopTimeString += stopTime.arrivalTime + ' - ' + stopTime.departureTime + '<br/>';
+                    }
+                });
+            }
 
             infoWindow.open(
             {
                 anchor: marker,
                 map,
             });
+            infoWindow.setContent(stopTimeString);
         });
             
         stopObj.stops.push(marker);
