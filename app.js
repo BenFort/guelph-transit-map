@@ -81,8 +81,10 @@ app.get('/bus-positions', async function (req, res)
                 
         for (let entityIndex in object.entity)
         {
+            let tripHeadsign = trips.find(x => x.trip_id === object.entity[entityIndex].vehicle.trip.tripId).trip_headsign;
+            
             const routeData = await GetRouteData(object.entity[entityIndex].vehicle.trip.routeId);
-            vehicles.push({ routeShortName: routeData.routeName, routeColour: routeData.routeColour, position: object.entity[entityIndex].vehicle.position });
+            vehicles.push({ routeShortName: routeData.routeName, routeColour: routeData.routeColour, position: object.entity[entityIndex].vehicle.position, tripHeadsign: tripHeadsign });
         }
 
         res.json(vehicles);
@@ -114,6 +116,13 @@ app.get('/alerts', async function (req, res)
                 });
             });
             
+            let descriptionText = object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
+
+            if(descriptionText == '.')
+            {
+                descriptionText = object.entity[entityIndex].alert.descriptionText.translation[0].text.replace(/[\n\r]/g, ' ');
+            }
+
             alerts.push(
             {
                 activePeriod:
@@ -122,8 +131,8 @@ app.get('/alerts', async function (req, res)
                     end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
                 },
                 routeAndStopInfo: routeAndStopInfo,
-                alertType: object.entity[entityIndex].alert.effect,
-                descriptionText: object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
+                alertType: object.entity[entityIndex].alert.effect.replace('_', ' '),
+                descriptionText: descriptionText
             });
         }
         res.json(alerts);
