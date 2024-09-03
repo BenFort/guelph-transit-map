@@ -26,7 +26,7 @@ app.use(express.static('public'));
 
 async function UpdateArrays()
 {
-    let response = await fetch('http://data.open.guelph.ca/datafiles/guelph-transit/guelph_transit_gtfs.zip');
+    let response = await fetch('https://guelph.ca/uploads/google/google_transit.zip');
     if (response.ok)
     {
         let responseData = await response.arrayBuffer();
