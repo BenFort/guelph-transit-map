@@ -341,7 +341,12 @@ async function UpdateMarkers(fetchNewData)
             
             if(labelText === '99')
             {
-                labelText += bus.tripHeadsign.split(' ')[2].charAt(0)
+                let splitHeadsign = bus.tripHeadsign.split(' ');
+
+                if(splitHeadsign.length > 2)
+                {
+                    labelText += bus.tripHeadsign.split(' ')[2].charAt(0);
+                }
             }
 
             let marker = new google.maps.Marker(
