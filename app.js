@@ -58,14 +58,14 @@ function ConvertUnixTimestampToString(timestampSeconds)
 
 async function GetRouteData(routeId)
 {
-    let route = routes.find(x => x.route_id === routeId);
+    let route = routes.find(x => x.route_short_name === routeId);
 
     if (!route)
     {
         await UpdateArrays();
     }
 
-    route = routes.find(x => x.route_id === routeId);
+    route = routes.find(x => x.route_short_name === routeId);
 
     return { routeName: route?.route_short_name ?? '?', routeColour: route?.route_color ?? '000000' };
 }
@@ -82,7 +82,6 @@ app.get('/bus-positions', async function (req, res)
         for (let entityIndex in object.entity)
         {            
             let vehicle = object.entity[entityIndex].vehicle;
-            
             const routeData = await GetRouteData(vehicle.trip.routeId);
             
             vehicles.push(
@@ -118,8 +117,9 @@ app.get('/alerts', async function (req, res)
             {
                 routeAndStopInfo.push(
                 {
-                    routeShortName: routes.find(route => route.route_id === idPair.routeId).route_short_name,
-                    stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
+                    routeShortName: routes.find(route => route.route_short_name === idPair.routeId).route_short_name,
+                    //stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
+                    stopName: idPair.stopId
                 });
             });
             
