@@ -58,14 +58,14 @@ function ConvertUnixTimestampToString(timestampSeconds)
 
 async function GetRouteData(routeId)
 {
-    let route = routes.find(x => x.route_short_name === routeId);
+    let route = routes.find(x => x.route_id === routeId);
 
     if (!route)
     {
         await UpdateArrays();
     }
 
-    route = routes.find(x => x.route_short_name === routeId);
+    route = routes.find(x => x.route_id === routeId);
 
     return { routeName: route?.route_short_name ?? '?', routeColour: route?.route_color ?? '000000' };
 }
@@ -118,9 +118,8 @@ app.get('/alerts', async function (req, res)
             {
                 routeAndStopInfo.push(
                 {
-                    routeShortName: routes.find(route => route.route_short_name === idPair.routeId).route_short_name,
-                    //stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
-                    stopName: idPair.stopId
+                    routeShortName: routes.find(route => route.route_id === idPair.routeId).route_short_name,
+                    stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
                 });
             });
             
