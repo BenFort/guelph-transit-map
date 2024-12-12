@@ -82,6 +82,7 @@ app.get('/bus-positions', async function (req, res)
         for (let entityIndex in object.entity)
         {            
             let vehicle = object.entity[entityIndex].vehicle;
+            
             const routeData = await GetRouteData(vehicle.trip.routeId);
             
             vehicles.push(
@@ -90,7 +91,6 @@ app.get('/bus-positions', async function (req, res)
                 routeColour: routeData.routeColour,
                 position: vehicle.position,
                 tripHeadsign: trips.find(x => x.trip_id === vehicle.trip.tripId).trip_headsign,
-                tripId: object.entity[entityIndex].vehicle.trip.tripId
             });
         }
 
@@ -163,15 +163,6 @@ app.get('/shape-coords-for-route-id', function (req, res)
     res.json(result);
 });
 
-app.get('/stop-times-for-stop-id', function (req, res)
-{
-    let result = [];
-
-    stopTimes.filter(stop => stop.stop_id === req.query.stopId).forEach(stop => result.push({arrivalTime: stop.arrival_time, departureTime: stop.departure_time}));
-    
-    res.json(result);
-});
-
 app.get('/route-data', function (req, res)
 {
     let result = [];
@@ -201,7 +192,7 @@ app.get('/route-data', function (req, res)
         routeStopIds.forEach(stopId =>
         {
             let stop = stops.find(stop => stop.stop_id == stopId);
-            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon), stopId: stop.stop_id});
+            routeStops.push({ stopName: stop.stop_name, stopLat: Number(stop.stop_lat), stopLon: Number(stop.stop_lon), stopId: stop.stop_id });
         });
 
         result.push({ routeId: route.route_id, routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
