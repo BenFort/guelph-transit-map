@@ -24,6 +24,8 @@ const app = express();
 
 app.use(express.static('public'));
 
+console.log(new Date().toLocaleString(), " Guelph Transit Map starting!");
+
 async function UpdateArrays()
 {
     let response = await fetch('https://guelph.ca/uploads/google/google_transit.zip');
