@@ -92,7 +92,7 @@ app.get('/bus-positions', async function (req, res)
                 routeShortName: routeData.routeName,
                 routeColour: routeData.routeColour,
                 position: vehicle.position,
-                tripHeadsign: trips.find(x => x.trip_id === vehicle.trip.tripId).trip_headsign,
+                tripHeadsign: trips.find(x => x.trip_id === vehicle.trip.tripId).trip_headsign
             });
         }
 
