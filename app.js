@@ -118,7 +118,7 @@ app.get('/alerts', async function (req, res)
             {
                 let routeAndStopInfo = [];
 
-                if(object.entity[entityIndex].alert.informedEntity == undefined)
+                if(object.entity[entityIndex].alert.informedEntity === undefined)
                 {
                     continue;
                 }
