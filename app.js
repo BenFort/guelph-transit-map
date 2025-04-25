@@ -24,6 +24,8 @@ const app = express();
 
 app.use(express.static('public'));
 
+console.log(new Date().toLocaleString(), " Guelph Transit Map starting!");
+
 async function UpdateArrays()
 {
     let response = await fetch('https://guelph.ca/uploads/google/google_transit.zip');
@@ -110,38 +112,51 @@ app.get('/alerts', async function (req, res)
         });
 
         let alerts = [];
-
-        for (let entityIndex in object.entity)
+        try
         {
-            let routeAndStopInfo = [];
-            object.entity[entityIndex].alert.informedEntity.forEach(idPair =>
+            for (let entityIndex in object.entity)
             {
-                routeAndStopInfo.push(
+                let routeAndStopInfo = [];
+
+                if(object.entity[entityIndex].alert.informedEntity == undefined)
                 {
-                    routeShortName: routes.find(route => route.route_id === idPair.routeId).route_short_name,
-                    stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
+                    continue;
+                }
+
+                object.entity[entityIndex].alert.informedEntity.forEach(idPair =>
+                {
+                    routeAndStopInfo.push(
+                    {
+                        routeShortName: routes.find(route => route.route_id === idPair.routeId).route_short_name,
+                        stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
+                    });
                 });
-            });
-            
-            let descriptionText = object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
-
-            if(descriptionText === '.')
-            {
-                descriptionText = object.entity[entityIndex].alert.descriptionText.translation[0].text.replace(/[\n\r]/g, ' ');
-            }
-
-            alerts.push(
-            {
-                activePeriod:
+                
+                let descriptionText = object.entity[entityIndex].alert.ttsDescriptionText.translation[0].text
+    
+                if(descriptionText === '.')
                 {
-                    start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start),
-                    end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
-                },
-                routeAndStopInfo: routeAndStopInfo,
-                alertType: object.entity[entityIndex].alert.effect.replace('_', ' '),
-                descriptionText: descriptionText
-            });
+                    descriptionText = object.entity[entityIndex].alert.descriptionText.translation[0].text.replace(/[\n\r]/g, ' ');
+                }
+    
+                alerts.push(
+                {
+                    activePeriod:
+                    {
+                        start: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].start),
+                        end: ConvertUnixTimestampToString(object.entity[entityIndex].alert.activePeriod[0].end)
+                    },
+                    routeAndStopInfo: routeAndStopInfo,
+                    alertType: object.entity[entityIndex].alert.effect.replace('_', ' '),
+                    descriptionText: descriptionText
+                });
+            }
         }
+        catch (error)
+        {
+            console.error("An error occurred when parsing the alerts:\n", error.stack);
+        }
+
         res.json(alerts);
     }
 });
