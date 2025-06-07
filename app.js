@@ -128,9 +128,7 @@ app.get('/alerts', async function (req, res)
                 object.entity[entityIndex].alert.informedEntity.forEach(idPair =>
                 {
 
-                    const route = routes.find(route => {
-                        return route.route_id === idPair.routeId;
-                      });
+                    const route = routes.find(route => route.route_id === idPair.routeId);
                       
                     const routeShortName = route?.route_short_name ?? "Unknown";
 
