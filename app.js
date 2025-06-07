@@ -130,7 +130,7 @@ app.get('/alerts', async function (req, res)
 
                     const route = routes.find(route => route.route_id === idPair.routeId);
                       
-                    const routeShortName = route?.route_short_name ?? "Unknown";
+                    const routeShortName = route?.route_short_name ?? 'Unknown';
 
                     routeAndStopInfo.push(
                     {
