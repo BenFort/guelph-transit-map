@@ -28,7 +28,7 @@ console.log(new Date().toLocaleString(), " Guelph Transit Map starting!");
 
 async function UpdateArrays()
 {
-    let response = await fetch('https://guelph.ca/uploads/google/google_transit.zip');
+    let response = await fetch('https://gismaps.guelph.ca/Pages/GTFS/google_transit.zip');
     if (response.ok)
     {
         let responseData = await response.arrayBuffer();
