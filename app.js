@@ -86,7 +86,8 @@ app.get('/bus-positions', async function (req, res)
             let vehicle = object.entity[entityIndex].vehicle;
             
             const routeData = await GetRouteData(vehicle.trip.routeId);
-            const tripHeadsign = trips.find(x => x.trip_id === vehicle.trip.tripId)?.trip_headsign ?? "";
+            const tripHeadsign = trips.find(x => x.trip_id === vehicle.trip.tripId)?.trip_headsign ?? '';
+
 
             vehicles.push(
             {
@@ -127,11 +128,9 @@ app.get('/alerts', async function (req, res)
                 object.entity[entityIndex].alert.informedEntity.forEach(idPair =>
                 {
 
-                    const route = routes.find(route => {
-                        return route.route_id === idPair.routeId;
-                      });
+                    const route = routes.find(route => route.route_id === idPair.routeId);
                       
-                    const routeShortName = route?.route_short_name ?? "Unknown";
+                    const routeShortName = route?.route_short_name ?? 'Unknown';
 
                     routeAndStopInfo.push(
                     {
