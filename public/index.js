@@ -24,6 +24,8 @@ let loading = true;
 let secCount = UPDATE_INTERVAL_SEC;
 let showControls = true;
 
+let iconSize = 60;
+
 async function InitializeMap()
 {
     const styles =
@@ -60,7 +62,10 @@ async function InitializeMap()
         controlSize: 60
     });
 
-    map.addListener('click', MapClick);
+    if (!isMobile())
+    {
+      map.addListener('click', MapClick);
+    }
 
     let siteControlsDiv = document.createElement('div');
     siteControlsDiv.id = 'siteControlsDiv';
@@ -203,6 +208,12 @@ async function InitializeMap()
         map.controls[google.maps.ControlPosition.CENTER].push(alertsDiv);
     }
     
+    if (isMobile())
+    {
+      iconSize = 100;
+      map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+    }
+
     await UpdateMarkers(true);
     loading = false;
 }
@@ -250,55 +261,56 @@ function ShowCurrentLocation(setMapCenter)
 function getBusIconData(bearing)
 {
     let iconUrl = 'bus.png';
-    let labelOrigin = new google.maps.Point(15, 12);
+    let labelPos = (iconSize/2) - 2;
+    let labelOrigin = new google.maps.Point(labelPos, labelPos);
 
     //North
     if (337.5 < bearing || bearing <= 22.5)
     {
         iconUrl = 'bus-north.png';
-        labelOrigin = new google.maps.Point(15, 19);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Northeast
     else if (22.5 < bearing && bearing <= 67.5)
     {
         iconUrl = 'bus-northeast.png';
-        labelOrigin = new google.maps.Point(15, 16);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //East
     else if (67.5 < bearing && bearing <= 112.5) 
     {
         iconUrl = 'bus-east.png';
-        labelOrigin = new google.maps.Point(15, 12);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Southeast
     else if (112.5 < bearing && bearing <= 157.5)
     {
         iconUrl = 'bus-southeast.png';
-        labelOrigin = new google.maps.Point(15, 12);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //South
     else if (157.5 < bearing && bearing <= 202.5)
     {
         iconUrl = 'bus-south.png';
-        labelOrigin = new google.maps.Point(15, 12);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Southwest
     else if (202.5 < bearing && bearing <= 247.5)
     {
         iconUrl = 'bus-southwest.png';
-        labelOrigin = new google.maps.Point(18, 12);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //West
     else if (247.5 < bearing && bearing <= 292.5)
     {
         iconUrl = 'bus-west.png';
-        labelOrigin = new google.maps.Point(21, 12);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Northwest
     else if (292.5 < bearing && bearing <= 337.5)
     {
         iconUrl = 'bus-northwest.png';
-        labelOrigin = new google.maps.Point(17, 16);
+        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     else if (bearing === undefined)
     {
@@ -338,7 +350,6 @@ async function UpdateMarkers(fetchNewData)
             const busIconData = getBusIconData(bus.position.bearing);
 
             let labelText = bus.routeShortName;
-            
             if (labelText === '99')
             {
                 let splitHeadsign = bus.tripHeadsign.split(' ');
@@ -347,6 +358,13 @@ async function UpdateMarkers(fetchNewData)
                 {
                     labelText += bus.tripHeadsign.split(' ')[2].charAt(0);
                 }
+            }
+
+            let labelFontSize = labelText.length > 2 ? '10px' : '17px';
+
+            if(isMobile())
+            {
+              labelFontSize = labelText.length > 2 ? '17px' : '24px';  
             }
 
             let marker = new google.maps.Marker(
@@ -361,14 +379,15 @@ async function UpdateMarkers(fetchNewData)
                 {
                     text: labelText,
                     fontWeight: 'bold',
-                    fontSize: labelText.length > 2 ? '10px' : '17px',
+                    fontSize: labelFontSize,
                     color: bus.routeColour
                     
                 },
                 icon:
                 {
                     url: busIconData.iconUrl,
-                    labelOrigin: busIconData.labelOrigin
+                    labelOrigin: busIconData.labelOrigin,
+                    scaledSize: new google.maps.Size(iconSize, iconSize)
                 }
             });
 
@@ -588,7 +607,15 @@ function ToggleMapControls()
         document.getElementById('siteControlsDiv').classList.remove('hidden');
         document.getElementById('routeToggleButtonsDiv').classList.remove('hidden');
         document.getElementById('currentLocationControl').classList.remove('hidden');
-        map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+
+        if (isMobile())
+        {
+          map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+        }
+        else
+        {
+          map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+        }
     }
     else
     {
@@ -620,4 +647,12 @@ function CompareRoutes(routeA, routeB)
     {
         return routeA.routeShortName.localeCompare(routeB.routeShortName);
     }
+}
+
+function isMobile() 
+{
+    return (
+        window.matchMedia("(pointer: coarse)").matches ||
+        navigator.maxTouchPoints > 0
+    );
 }
