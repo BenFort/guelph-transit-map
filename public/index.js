@@ -210,8 +210,8 @@ async function InitializeMap()
     
     if (isMobile())
     {
-      iconSize = 100;
-      map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+        iconSize = 100;
+        map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
     }
 
     await UpdateMarkers(true);
@@ -268,49 +268,41 @@ function getBusIconData(bearing)
     if (337.5 < bearing || bearing <= 22.5)
     {
         iconUrl = 'bus-north.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Northeast
     else if (22.5 < bearing && bearing <= 67.5)
     {
         iconUrl = 'bus-northeast.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //East
     else if (67.5 < bearing && bearing <= 112.5) 
     {
         iconUrl = 'bus-east.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Southeast
     else if (112.5 < bearing && bearing <= 157.5)
     {
         iconUrl = 'bus-southeast.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //South
     else if (157.5 < bearing && bearing <= 202.5)
     {
         iconUrl = 'bus-south.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Southwest
     else if (202.5 < bearing && bearing <= 247.5)
     {
         iconUrl = 'bus-southwest.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //West
     else if (247.5 < bearing && bearing <= 292.5)
     {
         iconUrl = 'bus-west.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     //Northwest
     else if (292.5 < bearing && bearing <= 337.5)
     {
         iconUrl = 'bus-northwest.png';
-        labelOrigin = new google.maps.Point(labelPos, labelPos);
     }
     else if (bearing === undefined)
     {
@@ -364,7 +356,7 @@ async function UpdateMarkers(fetchNewData)
 
             if(isMobile())
             {
-              labelFontSize = labelText.length > 2 ? '17px' : '24px';  
+                labelFontSize = labelText.length > 2 ? '17px' : '24px';  
             }
 
             let marker = new google.maps.Marker(
@@ -610,11 +602,11 @@ function ToggleMapControls()
 
         if (isMobile())
         {
-          map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
         }
         else
         {
-          map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
         }
     }
     else
@@ -649,10 +641,7 @@ function CompareRoutes(routeA, routeB)
     }
 }
 
-function isMobile() 
+function isMobile()
 {
-    return (
-        window.matchMedia("(pointer: coarse)").matches ||
-        navigator.maxTouchPoints > 0
-    );
+    return window.matchMedia("(pointer: coarse)").matches || navigator.maxTouchPoints > 0;
 }
