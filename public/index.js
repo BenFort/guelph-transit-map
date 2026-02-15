@@ -610,7 +610,7 @@ function ToggleMapControls()
 
         if (isMobile())
         {
-          map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
         }
         else
         {
