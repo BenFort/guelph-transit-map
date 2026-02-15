@@ -206,9 +206,13 @@ app.get('/route-data', function (req, res)
     routes.forEach(route =>
     {
         let routeStopIds = new Set();
+
         trips
             .filter(trip => trip.route_id === route.route_id)
-            .forEach(trip => tripIdStopIds[trip.trip_id].stopIds.forEach(stopId => routeStopIds.add(stopId)));
+            .filter(trip => tripIdStopIds[trip.trip_id]?.stopIds)
+            .forEach(trip =>
+                tripIdStopIds[trip.trip_id].stopIds.forEach(stopId => routeStopIds.add(stopId))
+            );
         
         let routeStops = [];
         routeStopIds.forEach(stopId =>
