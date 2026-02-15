@@ -614,7 +614,7 @@ function ToggleMapControls()
         }
         else
         {
-          map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
         }
     }
     else
