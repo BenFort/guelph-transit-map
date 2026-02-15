@@ -64,7 +64,7 @@ async function InitializeMap()
 
     if (!isMobile())
     {
-      map.addListener('click', MapClick);
+        map.addListener('click', MapClick);
     }
 
     let siteControlsDiv = document.createElement('div');
