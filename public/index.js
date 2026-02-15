@@ -364,7 +364,7 @@ async function UpdateMarkers(fetchNewData)
 
             if(isMobile())
             {
-              labelFontSize = labelText.length > 2 ? '17px' : '24px';  
+                labelFontSize = labelText.length > 2 ? '17px' : '24px';  
             }
 
             let marker = new google.maps.Marker(
