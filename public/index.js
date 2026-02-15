@@ -210,8 +210,8 @@ async function InitializeMap()
     
     if (isMobile())
     {
-      iconSize = 100;
-      map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+        iconSize = 100;
+        map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
     }
 
     await UpdateMarkers(true);
