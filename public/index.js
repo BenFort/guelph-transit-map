@@ -141,13 +141,34 @@ async function InitializeMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
-            const routeToggleButton = document.createElement('button');
-            routeToggleButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
-            routeToggleButton.style.backgroundColor = '#' + route.routeColor;
-            routeToggleButton.id = route.routeShortName;
-            routeToggleButton.classList.add(CSS_CLASS_BUTTON);
-            routeToggleButton.addEventListener('click', async () => await ToggleRoute(route));
-            routeToggleButtonsDiv.appendChild(routeToggleButton);
+            if (route.routeShortName === '99')
+            {
+                const routeToggleButtonNorth = document.createElement('button');
+                routeToggleButtonNorth.textContent = route.routeShortName + ' - ' + "North";
+                routeToggleButtonNorth.id = route.routeShortName;
+                routeToggleButtonNorth.style.backgroundColor = '#' + route.routeColor;
+                routeToggleButtonNorth.classList.add(CSS_CLASS_BUTTON);
+                routeToggleButtonNorth.addEventListener('click', async () => await ToggleRoute(route, routeToggleButtonNorth));
+                routeToggleButtonsDiv.appendChild(routeToggleButtonNorth);
+
+                const routeToggleButtonSouth = document.createElement('button');
+                routeToggleButtonSouth.textContent = route.routeShortName + ' - ' + "South";
+                routeToggleButtonSouth.id = route.routeShortName;
+                routeToggleButtonSouth.style.backgroundColor = '#' + route.routeColor;
+                routeToggleButtonSouth.classList.add(CSS_CLASS_BUTTON);
+                routeToggleButtonSouth.addEventListener('click', async () => await ToggleRoute(route, routeToggleButtonSouth));
+                routeToggleButtonsDiv.appendChild(routeToggleButtonSouth);
+            }
+            else
+            {
+                const routeToggleButton = document.createElement('button');
+                routeToggleButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
+                routeToggleButton.id = route.routeShortName;
+                routeToggleButton.style.backgroundColor = '#' + route.routeColor;
+                routeToggleButton.classList.add(CSS_CLASS_BUTTON);
+                routeToggleButton.addEventListener('click', async () => await ToggleRoute(route, routeToggleButton));
+                routeToggleButtonsDiv.appendChild(routeToggleButton);
+            }
         });
         
         map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(routeToggleButtonsDiv);
@@ -326,87 +347,125 @@ async function UpdateMarkers(fetchNewData)
             busPositions = await response.json();
         }
     }
-    
+
     busPositionMarkers.forEach(marker =>
     {
         marker.setMap(null);
     });
     busPositionMarkers = [];
-    
-    let selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
+
+    const selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
+
+    function shouldShowBus(bus)
+    {
+        if (selectedBtns.length === 0) return true;
+
+        const labelText = (bus.routeShortName ?? "").toString();
+        if (labelText === "99")
+        {
+            const parts = (bus.tripHeadsign || "").split(" ");
+            const suffix = (parts.length > 2) ? parts[2].charAt(0) : "";
+
+            if (suffix === "N")
+            {
+                for (const btn of selectedBtns)
+                {
+                    if (btn.innerText === "99 - North") return true;
+                }
+                return false;
+            }
+
+            if (suffix === "S")
+            {
+                for (const btn of selectedBtns)
+                {
+                    if (btn.innerText === "99 - South") return true;
+                }
+                return false;
+            }
+
+            for (const btn of selectedBtns)
+            {
+                if (btn.innerText.startsWith("99 -")) return true;
+            }
+            return false;
+        }
+        return !!selectedBtns.namedItem(labelText);
+    }
 
     busPositions.forEach(bus =>
     {
-        if (selectedBtns.namedItem(bus.routeShortName) || selectedBtns.length === 0)
+        if (!shouldShowBus(bus))
         {
-            const busIconData = getBusIconData(bus.position.bearing);
-
-            let labelText = bus.routeShortName;
-            if (labelText === '99')
-            {
-                let splitHeadsign = bus.tripHeadsign.split(' ');
-
-                if (splitHeadsign.length > 2)
-                {
-                    labelText += bus.tripHeadsign.split(' ')[2].charAt(0);
-                }
-            }
-
-            let labelFontSize = labelText.length > 2 ? '10px' : '17px';
-
-            if(isMobile())
-            {
-                labelFontSize = labelText.length > 2 ? '17px' : '24px';  
-            }
-
-            let marker = new google.maps.Marker(
-            {
-                position:
-                {
-                    lat: bus.position.latitude,
-                    lng: bus.position.longitude
-                },
-                map: map,
-                label:
-                {
-                    text: labelText,
-                    fontWeight: 'bold',
-                    fontSize: labelFontSize,
-                    color: bus.routeColour
-                    
-                },
-                icon:
-                {
-                    url: busIconData.iconUrl,
-                    labelOrigin: busIconData.labelOrigin,
-                    scaledSize: new google.maps.Size(iconSize, iconSize)
-                }
-            });
-
-            let infoWindowText = document.createElement('h1')
-            infoWindowText.innerText =  bus.tripHeadsign;
-            infoWindowText.style = 'font-size:17px';
-
-            let infoWindow = new google.maps.InfoWindow(
-            {
-                headerContent: infoWindowText,
-            });    
-
-            marker.addListener('click', () => 
-            {
-                infoWindows.push(infoWindow);
-        
-                infoWindow.open(
-                {
-                    anchor: marker,
-                    map,
-                });
-            });
-
-            busPositionMarkers.push(marker);
+            return;
         }
+
+        const busIconData = getBusIconData(bus.position.bearing);
+
+        let labelText = bus.routeShortName;
+        if (labelText === '99')
+        {
+            let splitHeadsign = bus.tripHeadsign.split(' ');
+
+            if (splitHeadsign.length > 2)
+            {
+                labelText += bus.tripHeadsign.split(' ')[2].charAt(0);
+            }
+        }
+
+        let labelFontSize = labelText.length > 2 ? '10px' : '17px';
+        if (isMobile())
+        {
+            labelFontSize = labelText.length > 2 ? '17px' : '24px';
+        }
+
+        let marker = new google.maps.Marker(
+        {
+            position:
+            {
+                lat: bus.position.latitude,
+                lng: bus.position.longitude
+            },
+            map: null,
+            label:
+            {
+                text: labelText,
+                fontWeight: 'bold',
+                fontSize: labelFontSize,
+                color: bus.routeColour
+            },
+            icon:
+            {
+                url: busIconData.iconUrl,
+                labelOrigin: busIconData.labelOrigin,
+                scaledSize: new google.maps.Size(iconSize, iconSize)
+            }
+        });
+
+        let infoWindowText = document.createElement('h1');
+        infoWindowText.innerText =  bus.tripHeadsign;
+        infoWindowText.style = 'font-size:17px';
+
+        let infoWindow = new google.maps.InfoWindow(
+        {
+            headerContent: infoWindowText,
+        });
+
+        marker.addListener('click', () =>
+        {
+            infoWindows.push(infoWindow);
+
+            infoWindow.open(
+            {
+                anchor: marker,
+                map,
+            });
+        });
+
+        marker.setMap(map);
+        busPositionMarkers.push(marker);
     });
-    
+
     if (showLocation)
     {
         locationMarker.setMap(null);
@@ -445,10 +504,8 @@ function GenerateArrowIcons()
     return icons;
 }
 
-async function ToggleRoute(route)
+async function ToggleRoute(route, btn)
 {
-    const btn = document.getElementById(route.routeShortName)
-
     if (!btn.classList.contains(CSS_CLASS_SELECTED))
     {
         let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: route.routeId }));
