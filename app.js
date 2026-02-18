@@ -173,7 +173,18 @@ app.get('/shape-coords-for-route-id', function (req, res)
     let result = [];
     let shapeIds = new Set();
 
-    trips.filter(trip => trip.route_id === req.query.routeId).forEach(trip => shapeIds.add(trip.shape_id));
+    if (req.query.routeButtonText === "99 - North")
+    {
+        trips.filter(trip => trip.route_id === req.query.routeId && trip.trip_headsign === "99 Mainline Northbound").forEach(trip => shapeIds.add(trip.shape_id));
+    }
+    else if (req.query.routeButtonText === "99 - South")
+    {
+        trips.filter(trip => trip.route_id === req.query.routeId && trip.trip_headsign === "99 Mainline Southbound").forEach(trip => shapeIds.add(trip.shape_id));
+    }
+    else
+    {
+        trips.filter(trip => trip.route_id === req.query.routeId).forEach(trip => shapeIds.add(trip.shape_id));
+    }
     
     shapeIds.forEach(shapeId =>
     {
@@ -224,6 +235,36 @@ app.get('/route-data', function (req, res)
         result.push({ routeId: route.route_id, routeShortName: route.route_short_name, routeLongName: route.route_long_name, routeColor: route.route_color, routeStops: routeStops });
     });
     
+    res.json(result);
+});
+
+app.get('/stop-ids-for-trip-headsign', function (req, res)
+{
+    let result = [];
+    let tripHeadsign = req.query.tripHeadsign;
+
+    let tripIdStopIds = {};
+    
+    stopTimes.forEach(stopTime =>
+    {
+        let key = stopTime.trip_id;
+        if (!tripIdStopIds[key])
+        {
+            tripIdStopIds[key] = { stopIds: new Set([stopTime.stop_id]) };
+        }
+        else
+        {
+            tripIdStopIds[key].stopIds.add(stopTime.stop_id);
+        }
+    });
+
+    trips
+        .filter(trip => trip.trip_headsign === tripHeadsign)
+        .filter(trip => tripIdStopIds[trip.trip_id]?.stopIds)
+        .forEach(trip =>
+            tripIdStopIds[trip.trip_id].stopIds.forEach(stopId => result.push(stopId))
+        );
+
     res.json(result);
 });
 

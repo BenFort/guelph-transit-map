@@ -508,7 +508,7 @@ async function ToggleRoute(route, btn)
 {
     if (!btn.classList.contains(CSS_CLASS_SELECTED))
     {
-        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: route.routeId }));
+        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: route.routeId , routeButtonText: btn.textContent}));
         let coordSetList = [];
         if (response.ok)
         {
@@ -518,6 +518,7 @@ async function ToggleRoute(route, btn)
         let routeObj =
         {
             route: route,
+            routeButtonText: btn.textContent,
             lines: []
         };
         
@@ -533,20 +534,20 @@ async function ToggleRoute(route, btn)
 
         if(showStops)
         {
-            DisplayStops(route);
+            DisplayStops(route, btn.textContent);
         }
 
         btn.classList.add(CSS_CLASS_SELECTED);
     }
     else
     {
-        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.route.routeId === route.routeId);
+        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.routeButtonText === btn.textContent);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
 
         if(showStops)
         {
-            let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeId === route.routeId);
+            let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeButtonText === btn.textContent);
             displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
             displayedStops.splice(displayedStopIndex, 1);
         }
@@ -565,8 +566,8 @@ function ToggleStops()
     if(showStops)
     {
         toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
-        
-        displayedRoutes.forEach(displayedRoute => DisplayStops(displayedRoute.route));
+
+        displayedRoutes.forEach(displayedRoute => DisplayStops(displayedRoute.route, displayedRoute.routeButtonText));
     }
     else
     {
@@ -592,44 +593,68 @@ function ToggleAlerts()
     }
 }
 
-function DisplayStops(route)
+async function DisplayStops(route, routeButtonText)
 {
+    let stopList = [];
+    console.log(displayedStops);
+    let isRoute99 = false;
+
     let stopObj = 
     {
         routeId: route.routeId,
+        routeButtonText: routeButtonText,
         stops: []
     };
 
+    if (routeButtonText === "99 - North")
+    {
+        stopList = await GetStopIdsForTripHeadsign("99 Mainline Northbound");
+        isRoute99 = true;
+
+    }
+    if (routeButtonText === "99 - South")
+    {
+        stopList = await GetStopIdsForTripHeadsign("99 Mainline Southbound");
+        isRoute99 = true;
+    }
+
     route.routeStops.forEach(stop => 
     {
-        let marker = new google.maps.Marker(
+        if (isRoute99 && !stopList.includes(stop.stopId))
         {
-            position: { lat: stop.stopLat, lng: stop.stopLon },
-            map,
-            icon: 'marker.png',
-        });
-
-        let infoWindowText = document.createElement('h1')
-        infoWindowText.innerText =  stop.stopName;
-        infoWindowText.style = "font-size:17px";
-
-        let infoWindow = new google.maps.InfoWindow(
+            return;
+        }
+        else
         {
-            headerContent: infoWindowText,
-        }); 
-
-        marker.addListener('click', () => 
-        {
-            infoWindows.push(infoWindow);
-
-            infoWindow.open(
+            let marker = new google.maps.Marker(
             {
-                anchor: marker,
+                position: { lat: stop.stopLat, lng: stop.stopLon },
                 map,
+                icon: 'marker.png',
             });
-        });
-            
-        stopObj.stops.push(marker);
+
+            let infoWindowText = document.createElement('h1')
+            infoWindowText.innerText =  stop.stopName;
+            infoWindowText.style = "font-size:17px";
+
+            let infoWindow = new google.maps.InfoWindow(
+            {
+                headerContent: infoWindowText,
+            }); 
+
+            marker.addListener('click', () => 
+            {
+                infoWindows.push(infoWindow);
+
+                infoWindow.open(
+                {
+                    anchor: marker,
+                    map,
+                });
+            });
+                
+            stopObj.stops.push(marker);   
+        }
     });
 
     displayedStops.push(stopObj);
@@ -696,6 +721,18 @@ function CompareRoutes(routeA, routeB)
     {
         return routeA.routeShortName.localeCompare(routeB.routeShortName);
     }
+}
+
+async function GetStopIdsForTripHeadsign(tripHeadsign)
+{
+    const response = await fetch('stop-ids-for-trip-headsign?' + new URLSearchParams({ tripHeadsign }));
+
+    if (!response.ok)
+    {
+        throw new Error('Failed to fetch stop IDs');
+    }
+
+    return await response.json();
 }
 
 function isMobile()
