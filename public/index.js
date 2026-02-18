@@ -141,33 +141,11 @@ async function InitializeMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
-            if (route.routeShortName === '99')
-            {
-                const routeToggleButtonNorth = document.createElement('button');
-                routeToggleButtonNorth.textContent = route.routeShortName + ' - ' + "North";
-                routeToggleButtonNorth.id = route.routeShortName;
-                routeToggleButtonNorth.style.backgroundColor = '#' + route.routeColor;
-                routeToggleButtonNorth.classList.add(CSS_CLASS_BUTTON);
-                routeToggleButtonNorth.addEventListener('click', async () => await ToggleRoute(route, routeToggleButtonNorth));
-                routeToggleButtonsDiv.appendChild(routeToggleButtonNorth);
-
-                const routeToggleButtonSouth = document.createElement('button');
-                routeToggleButtonSouth.textContent = route.routeShortName + ' - ' + "South";
-                routeToggleButtonSouth.id = route.routeShortName;
-                routeToggleButtonSouth.style.backgroundColor = '#' + route.routeColor;
-                routeToggleButtonSouth.classList.add(CSS_CLASS_BUTTON);
-                routeToggleButtonSouth.addEventListener('click', async () => await ToggleRoute(route, routeToggleButtonSouth));
-                routeToggleButtonsDiv.appendChild(routeToggleButtonSouth);
-            }
-            else
-            {
-                const routeToggleButton = document.createElement('button');
-                routeToggleButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
-                routeToggleButton.id = route.routeShortName;
-                routeToggleButton.style.backgroundColor = '#' + route.routeColor;
-                routeToggleButton.classList.add(CSS_CLASS_BUTTON);
-                routeToggleButton.addEventListener('click', async () => await ToggleRoute(route, routeToggleButton));
-                routeToggleButtonsDiv.appendChild(routeToggleButton);
+            if (route.routeShortName === '99') {
+                createRouteToggleButton(route, `${route.routeShortName} - North`, routeToggleButtonsDiv);
+                createRouteToggleButton(route, `${route.routeShortName} - South`, routeToggleButtonsDiv);
+            } else {
+                createRouteToggleButton(route, `${route.routeShortName} - ${route.routeLongName}`, routeToggleButtonsDiv);
             }
         });
         
@@ -237,6 +215,16 @@ async function InitializeMap()
 
     await UpdateMarkers(true);
     loading = false;
+}
+
+function createRouteToggleButton(route, label, routeToggleButtonsDiv) {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.id = route.routeShortName;
+    btn.style.backgroundColor = '#' + route.routeColor;
+    btn.classList.add(CSS_CLASS_BUTTON);
+    btn.addEventListener('click', async () => await ToggleRoute(route, btn));
+    routeToggleButtonsDiv.appendChild(btn);
 }
 
 function ShowCurrentLocation(setMapCenter)
