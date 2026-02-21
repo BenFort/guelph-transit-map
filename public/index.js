@@ -141,13 +141,15 @@ async function InitializeMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
-            const routeToggleButton = document.createElement('button');
-            routeToggleButton.textContent = route.routeShortName + ' - ' + route.routeLongName;
-            routeToggleButton.style.backgroundColor = '#' + route.routeColor;
-            routeToggleButton.id = route.routeShortName;
-            routeToggleButton.classList.add(CSS_CLASS_BUTTON);
-            routeToggleButton.addEventListener('click', async () => await ToggleRoute(route));
-            routeToggleButtonsDiv.appendChild(routeToggleButton);
+            if (route.routeShortName === '99') 
+            {
+                createRouteToggleButton(route, `${route.routeShortName} - North`, routeToggleButtonsDiv);
+                createRouteToggleButton(route, `${route.routeShortName} - South`, routeToggleButtonsDiv);
+            } 
+            else 
+            {
+                createRouteToggleButton(route, `${route.routeShortName} - ${route.routeLongName}`, routeToggleButtonsDiv);
+            }
         });
         
         map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(routeToggleButtonsDiv);
@@ -216,6 +218,16 @@ async function InitializeMap()
 
     await UpdateMarkers(true);
     loading = false;
+}
+
+function createRouteToggleButton(route, label, routeToggleButtonsDiv) {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.id = route.routeShortName;
+    btn.style.backgroundColor = '#' + route.routeColor;
+    btn.classList.add(CSS_CLASS_BUTTON);
+    btn.addEventListener('click', async () => await ToggleRoute(route, btn));
+    routeToggleButtonsDiv.appendChild(btn);
 }
 
 function ShowCurrentLocation(setMapCenter)
@@ -326,87 +338,125 @@ async function UpdateMarkers(fetchNewData)
             busPositions = await response.json();
         }
     }
-    
+
     busPositionMarkers.forEach(marker =>
     {
         marker.setMap(null);
     });
     busPositionMarkers = [];
-    
-    let selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
+
+    const selectedBtns = document.getElementsByClassName(CSS_CLASS_SELECTED);
+
+    function shouldShowBus(bus)
+    {
+        if (selectedBtns.length === 0) return true;
+
+        const labelText = (bus.routeShortName ?? "").toString();
+        if (labelText === "99")
+        {
+            const parts = (bus.tripHeadsign || "").split(" ");
+            const suffix = (parts.length > 2) ? parts[2].charAt(0) : "";
+
+            if (suffix === "N")
+            {
+                for (const btn of selectedBtns)
+                {
+                    if (btn.innerText === "99 - North") return true;
+                }
+                return false;
+            }
+
+            if (suffix === "S")
+            {
+                for (const btn of selectedBtns)
+                {
+                    if (btn.innerText === "99 - South") return true;
+                }
+                return false;
+            }
+
+            for (const btn of selectedBtns)
+            {
+                if (btn.innerText.startsWith("99 -")) return true;
+            }
+            return false;
+        }
+        return selectedBtns.namedItem(labelText);
+    }
 
     busPositions.forEach(bus =>
     {
-        if (selectedBtns.namedItem(bus.routeShortName) || selectedBtns.length === 0)
+        if (!shouldShowBus(bus))
         {
-            const busIconData = getBusIconData(bus.position.bearing);
-
-            let labelText = bus.routeShortName;
-            if (labelText === '99')
-            {
-                let splitHeadsign = bus.tripHeadsign.split(' ');
-
-                if (splitHeadsign.length > 2)
-                {
-                    labelText += bus.tripHeadsign.split(' ')[2].charAt(0);
-                }
-            }
-
-            let labelFontSize = labelText.length > 2 ? '10px' : '17px';
-
-            if(isMobile())
-            {
-                labelFontSize = labelText.length > 2 ? '17px' : '24px';  
-            }
-
-            let marker = new google.maps.Marker(
-            {
-                position:
-                {
-                    lat: bus.position.latitude,
-                    lng: bus.position.longitude
-                },
-                map: map,
-                label:
-                {
-                    text: labelText,
-                    fontWeight: 'bold',
-                    fontSize: labelFontSize,
-                    color: bus.routeColour
-                    
-                },
-                icon:
-                {
-                    url: busIconData.iconUrl,
-                    labelOrigin: busIconData.labelOrigin,
-                    scaledSize: new google.maps.Size(iconSize, iconSize)
-                }
-            });
-
-            let infoWindowText = document.createElement('h1')
-            infoWindowText.innerText =  bus.tripHeadsign;
-            infoWindowText.style = 'font-size:17px';
-
-            let infoWindow = new google.maps.InfoWindow(
-            {
-                headerContent: infoWindowText,
-            });    
-
-            marker.addListener('click', () => 
-            {
-                infoWindows.push(infoWindow);
-        
-                infoWindow.open(
-                {
-                    anchor: marker,
-                    map,
-                });
-            });
-
-            busPositionMarkers.push(marker);
+            return;
         }
+
+        const busIconData = getBusIconData(bus.position.bearing);
+
+        let labelText = bus.routeShortName;
+        if (labelText === '99')
+        {
+            let splitHeadsign = bus.tripHeadsign.split(' ');
+
+            if (splitHeadsign.length > 2)
+            {
+                labelText += bus.tripHeadsign.split(' ')[2].charAt(0);
+            }
+        }
+
+        let labelFontSize = labelText.length > 2 ? '10px' : '17px';
+        if (isMobile())
+        {
+            labelFontSize = labelText.length > 2 ? '17px' : '24px';
+        }
+
+        let marker = new google.maps.Marker(
+        {
+            position:
+            {
+                lat: bus.position.latitude,
+                lng: bus.position.longitude
+            },
+            map: null,
+            label:
+            {
+                text: labelText,
+                fontWeight: 'bold',
+                fontSize: labelFontSize,
+                color: bus.routeColour
+            },
+            icon:
+            {
+                url: busIconData.iconUrl,
+                labelOrigin: busIconData.labelOrigin,
+                scaledSize: new google.maps.Size(iconSize, iconSize)
+            }
+        });
+
+        let infoWindowText = document.createElement('h1');
+        infoWindowText.innerText =  bus.tripHeadsign;
+        infoWindowText.style = 'font-size:17px';
+
+        let infoWindow = new google.maps.InfoWindow(
+        {
+            headerContent: infoWindowText,
+        });
+
+        marker.addListener('click', () =>
+        {
+            infoWindows.push(infoWindow);
+
+            infoWindow.open(
+            {
+                anchor: marker,
+                map,
+            });
+        });
+
+        marker.setMap(map);
+        busPositionMarkers.push(marker);
     });
-    
+
     if (showLocation)
     {
         locationMarker.setMap(null);
@@ -445,13 +495,11 @@ function GenerateArrowIcons()
     return icons;
 }
 
-async function ToggleRoute(route)
+async function ToggleRoute(route, btn)
 {
-    const btn = document.getElementById(route.routeShortName)
-
     if (!btn.classList.contains(CSS_CLASS_SELECTED))
     {
-        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: route.routeId }));
+        let response = await fetch('shape-coords-for-route-id?' + new URLSearchParams({ routeId: route.routeId , routeButtonText: btn.textContent}));
         let coordSetList = [];
         if (response.ok)
         {
@@ -461,6 +509,7 @@ async function ToggleRoute(route)
         let routeObj =
         {
             route: route,
+            routeButtonText: btn.textContent,
             lines: []
         };
         
@@ -476,20 +525,20 @@ async function ToggleRoute(route)
 
         if(showStops)
         {
-            DisplayStops(route);
+            DisplayStops(route, btn.textContent);
         }
 
         btn.classList.add(CSS_CLASS_SELECTED);
     }
     else
     {
-        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.route.routeId === route.routeId);
+        let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.routeButtonText === btn.textContent);
         displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
         displayedRoutes.splice(displayedRouteIndex, 1);
 
         if(showStops)
         {
-            let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeId === route.routeId);
+            let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeButtonText === btn.textContent);
             displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
             displayedStops.splice(displayedStopIndex, 1);
         }
@@ -508,8 +557,8 @@ function ToggleStops()
     if(showStops)
     {
         toggleStopsButton.classList.add(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
-        
-        displayedRoutes.forEach(displayedRoute => DisplayStops(displayedRoute.route));
+
+        displayedRoutes.forEach(displayedRoute => DisplayStops(displayedRoute.route, displayedRoute.routeButtonText));
     }
     else
     {
@@ -535,44 +584,67 @@ function ToggleAlerts()
     }
 }
 
-function DisplayStops(route)
+async function DisplayStops(route, routeButtonText)
 {
+    let stopList = [];
+    let isRoute99 = false;
+
     let stopObj = 
     {
         routeId: route.routeId,
+        routeButtonText: routeButtonText,
         stops: []
     };
 
+    if (routeButtonText === "99 - North")
+    {
+        stopList = await GetStopIdsForTripHeadsign("99 Mainline Northbound");
+        isRoute99 = true;
+
+    }
+    if (routeButtonText === "99 - South")
+    {
+        stopList = await GetStopIdsForTripHeadsign("99 Mainline Southbound");
+        isRoute99 = true;
+    }
+
     route.routeStops.forEach(stop => 
     {
-        let marker = new google.maps.Marker(
+        if (isRoute99 && !stopList.includes(stop.stopId))
         {
-            position: { lat: stop.stopLat, lng: stop.stopLon },
-            map,
-            icon: 'marker.png',
-        });
-
-        let infoWindowText = document.createElement('h1')
-        infoWindowText.innerText =  stop.stopName;
-        infoWindowText.style = "font-size:17px";
-
-        let infoWindow = new google.maps.InfoWindow(
+            return;
+        }
+        else
         {
-            headerContent: infoWindowText,
-        }); 
-
-        marker.addListener('click', () => 
-        {
-            infoWindows.push(infoWindow);
-
-            infoWindow.open(
+            let marker = new google.maps.Marker(
             {
-                anchor: marker,
+                position: { lat: stop.stopLat, lng: stop.stopLon },
                 map,
+                icon: 'marker.png',
             });
-        });
-            
-        stopObj.stops.push(marker);
+
+            let infoWindowText = document.createElement('h1')
+            infoWindowText.innerText =  stop.stopName;
+            infoWindowText.style = "font-size:17px";
+
+            let infoWindow = new google.maps.InfoWindow(
+            {
+                headerContent: infoWindowText,
+            }); 
+
+            marker.addListener('click', () => 
+            {
+                infoWindows.push(infoWindow);
+
+                infoWindow.open(
+                {
+                    anchor: marker,
+                    map,
+                });
+            });
+                
+            stopObj.stops.push(marker);   
+        }
     });
 
     displayedStops.push(stopObj);
@@ -639,6 +711,18 @@ function CompareRoutes(routeA, routeB)
     {
         return routeA.routeShortName.localeCompare(routeB.routeShortName);
     }
+}
+
+async function GetStopIdsForTripHeadsign(tripHeadsign)
+{
+    const response = await fetch('stop-ids-for-trip-headsign?' + new URLSearchParams({ tripHeadsign }));
+
+    if (!response.ok)
+    {
+        throw new Error('Failed to fetch stop IDs');
+    }
+
+    return await response.json();
 }
 
 function isMobile()
