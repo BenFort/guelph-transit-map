@@ -141,10 +141,13 @@ async function InitializeMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
-            if (route.routeShortName === '99') {
+            if (route.routeShortName === '99') 
+            {
                 createRouteToggleButton(route, `${route.routeShortName} - North`, routeToggleButtonsDiv);
                 createRouteToggleButton(route, `${route.routeShortName} - South`, routeToggleButtonsDiv);
-            } else {
+            } 
+            else 
+            {
                 createRouteToggleButton(route, `${route.routeShortName} - ${route.routeLongName}`, routeToggleButtonsDiv);
             }
         });
@@ -378,7 +381,7 @@ async function UpdateMarkers(fetchNewData)
             }
             return false;
         }
-        return !!selectedBtns.namedItem(labelText);
+        return selectedBtns.namedItem(labelText);
     }
 
     busPositions.forEach(bus =>
@@ -584,7 +587,6 @@ function ToggleAlerts()
 async function DisplayStops(route, routeButtonText)
 {
     let stopList = [];
-    console.log(displayedStops);
     let isRoute99 = false;
 
     let stopObj = 
