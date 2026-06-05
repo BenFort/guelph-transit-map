@@ -11,8 +11,8 @@
   "license": "ISC",
   "dependencies": {
     "csv-parse": "^5.6.0",
-    "express": "^4.22.1",
-    "protobufjs": "^7.5.4",
+    "express": "^4.22.2",
+    "protobufjs": "^7.6.2",
     "unzipper": "^0.11.6"
   }
 }
