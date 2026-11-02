@@ -5,10 +5,15 @@ const CSS_CLASS_ALERTSDIV = 'alertsDiv';
 const CSS_CLASS_BUTTON = 'button';
 const CSS_CLASS_TOGGLE_BUTTON = 'toggleButton';
 const CSS_CLASS_TOGGLE_BUTTON_ACTIVE = 'toggleButtonActive';
-const CSS_CLASS_CURRENT_LOCATION_BUTTON = 'currentLocationButton';
+const CSS_CLASS_MAP_CONTROL_BUTTON = 'mapControlButton';
 const CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE = 'currentLocationButtonImage';
 const CSS_CLASS_ALERTS_CLOSE_BUTTON = 'alertsCloseButton';
+const CSS_CLASS_MAP_TYPE_CONTROL = 'mapTypeControl';
+const CSS_CLASS_MAP_TYPE_BUTTON_ACTIVE = 'mapTypeButtonActive';
 const UPDATE_INTERVAL_SEC = 31;
+const INFO_WINDOW_OPTIONS = { autoClose: false, closeOnClick: false };
+const SHOWN_POI_CLASSES = ['park', 'school', 'college', 'hospital'];
+const SHOWN_TRANSIT_CLASSES = ['airport', 'rail'];
 
 let map;
 let showStops = false;
@@ -28,43 +33,36 @@ let iconSize = 60;
 
 async function InitializeMap()
 {
-    const styles =
-    {
-        default: [],
-        hide:
-        [
-            {
-                featureType: "poi.business",
-                stylers: [{ visibility: "off" }],
-            },
-            {
-                featureType: "transit",
-                elementType: "labels.icon",
-                stylers: [{ visibility: "off" }],
-            }
-        ]
-    }; 
-
-    map = new google.maps.Map(document.getElementById('map'),
+    map = L.map('map',
     {
         zoom: 13,
         center: { lat: 43.538832, lng: -80.245294 },
-        gestureHandling: 'greedy',
-        mapTypeControl: true,
-        mapTypeControlOptions:
-        {
-            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-            position: google.maps.ControlPosition.TOP_RIGHT
-        },
-        zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
-        streetViewControl: false,
-        styles: styles['hide'],
-        controlSize: 60
+        zoomControl: false
     });
+
+    map.attributionControl.setPrefix(false);
+
+    let streetLayer = L.maplibreGL(
+    {
+        style: 'https://tiles.openfreemap.org/styles/bright',
+        attribution: '<a href="https://openfreemap.org">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    });
+
+    // The MapLibre map is rebuilt each time this layer is added, so the filters are reapplied here
+    streetLayer.on('add', () => AdjustMapLabels(streetLayer.getMaplibreMap()));
+    streetLayer.addTo(map);
+
+    let satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    {
+        maxZoom: 19,
+        attribution: 'Tiles &copy; Esri, Maxar, Earthstar Geographics'
+    });
+
+    AddMapControl(CreateMapTypeControl(streetLayer, satelliteLayer), 'topright');
 
     if (!isMobile())
     {
-        map.addListener('click', MapClick);
+        map.on('click', MapClick);
     }
 
     let siteControlsDiv = document.createElement('div');
@@ -122,15 +120,36 @@ async function InitializeMap()
     document.body.appendChild(aboutDialog);
     document.getElementById('aboutDialogClose').addEventListener('click', function() { document.getElementById('aboutDialog').close(); });
 
-    map.controls[google.maps.ControlPosition.TOP_LEFT].push(siteControlsDiv);
+    AddMapControl(siteControlsDiv, 'topleft');
+
+    let fullscreenControlDiv = document.createElement('div');
+    fullscreenControlDiv.id = 'fullscreenControl';
+
+    let fullscreenButton = document.createElement('button');
+    fullscreenButton.title = 'Toggle fullscreen view';
+    fullscreenButton.classList.add(CSS_CLASS_MAP_CONTROL_BUTTON);
+    fullscreenButton.innerHTML = '<svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#666" stroke-width="2.5"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>';
+    fullscreenButton.addEventListener('click', function ()
+    {
+        if (document.fullscreenElement)
+        {
+            document.exitFullscreen();
+        }
+        else
+        {
+            document.getElementById('map').requestFullscreen();
+        }
+    });
+    fullscreenControlDiv.appendChild(fullscreenButton);
+
+    AddMapControl(fullscreenControlDiv, 'topright');
 
     let currentLocationControlDiv = document.createElement('div');
     currentLocationControlDiv.id = 'currentLocationControl';
-    currentLocationControlDiv.style.marginTop = '15px';
 
     let currentLocationButton = document.createElement('button');
     currentLocationButton.title = 'Display current location';
-    currentLocationButton.classList.add(CSS_CLASS_CURRENT_LOCATION_BUTTON)
+    currentLocationButton.classList.add(CSS_CLASS_MAP_CONTROL_BUTTON)
     currentLocationControlDiv.appendChild(currentLocationButton);
 
     let currentLocationButtonImage = document.createElement('div');
@@ -147,12 +166,15 @@ async function InitializeMap()
         }
         else
         {
-            locationMarker.setMap(null);
+            locationMarker.remove();
             currentLocationButtonImage.style.backgroundPosition = '0 0';
         }
     });
 
-    map.controls[google.maps.ControlPosition.RIGHT_TOP].push(currentLocationControlDiv);
+    AddMapControl(currentLocationControlDiv, 'topright');
+
+    let zoomControl = L.control.zoom({ position: 'topright' }).addTo(map);
+    zoomControl.getContainer().id = 'zoomControl';
 
     let routeToggleButtonsDiv = document.createElement('div');
     routeToggleButtonsDiv.id = 'routeToggleButtonsDiv';
@@ -176,7 +198,7 @@ async function InitializeMap()
             }
         });
         
-        map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(routeToggleButtonsDiv);
+        AddMapOverlay(routeToggleButtonsDiv);
     }
     
     let alertsDiv = document.createElement('div');
@@ -231,17 +253,92 @@ async function InitializeMap()
             alertsDiv.appendChild(document.createElement('hr'));
         });
         
-        map.controls[google.maps.ControlPosition.CENTER].push(alertsDiv);
+        AddMapOverlay(alertsDiv);
     }
     
     if (isMobile())
     {
         iconSize = 100;
-        map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
+        fullscreenControlDiv.classList.add('hidden');
     }
 
     await UpdateMarkers(true);
     loading = false;
+}
+
+function AdjustMapLabels(maplibreMap)
+{
+    maplibreMap.once('style.load', () =>
+    {
+        ['poi_r1', 'poi_r7', 'poi_r20'].forEach(layerId =>
+        {
+            maplibreMap.setFilter(layerId, ['all', maplibreMap.getFilter(layerId), ['in', ['get', 'class'], ['literal', SHOWN_POI_CLASSES]]]);
+        });
+
+        maplibreMap.setFilter('poi_transit', ['in', ['get', 'class'], ['literal', SHOWN_TRANSIT_CLASSES]]);
+
+        // Show main street names at the default zoom. MapLibre zoom is one less than Leaflet zoom
+        maplibreMap.setLayerZoomRange('highway-name-major', 11, 24);
+
+        ['highway-name-major', 'highway-name-minor', 'highway-name-path'].forEach(layerId =>
+        {
+            maplibreMap.setLayoutProperty(layerId, 'text-size', ['interpolate', ['linear'], ['zoom'], 12, 13, 16, 16]);
+            maplibreMap.setPaintProperty(layerId, 'text-color', '#222');
+            maplibreMap.setPaintProperty(layerId, 'text-halo-color', '#fff');
+            maplibreMap.setPaintProperty(layerId, 'text-halo-width', 2);
+        });
+    });
+}
+
+function StopMapEvents(div)
+{
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.disableScrollPropagation(div);
+}
+
+function AddMapControl(div, position)
+{
+    StopMapEvents(div);
+
+    let control = L.control({ position: position });
+    control.onAdd = () => div;
+    control.addTo(map);
+}
+
+// Leaflet has no centred control positions, so these are placed by CSS instead
+function AddMapOverlay(div)
+{
+    StopMapEvents(div);
+    map.getContainer().appendChild(div);
+}
+
+function CreateMapTypeControl(streetLayer, satelliteLayer)
+{
+    let mapTypeControlDiv = document.createElement('div');
+    mapTypeControlDiv.id = 'mapTypeControl';
+    mapTypeControlDiv.classList.add(CSS_CLASS_MAP_TYPE_CONTROL);
+
+    let streetButton = document.createElement('button');
+    streetButton.textContent = 'Map';
+    streetButton.classList.add(CSS_CLASS_MAP_TYPE_BUTTON_ACTIVE);
+    mapTypeControlDiv.appendChild(streetButton);
+
+    let satelliteButton = document.createElement('button');
+    satelliteButton.textContent = 'Satellite';
+    mapTypeControlDiv.appendChild(satelliteButton);
+
+    function SelectMapType(activeButton, inactiveButton, activeLayer, inactiveLayer)
+    {
+        inactiveLayer.remove();
+        activeLayer.addTo(map);
+        activeButton.classList.add(CSS_CLASS_MAP_TYPE_BUTTON_ACTIVE);
+        inactiveButton.classList.remove(CSS_CLASS_MAP_TYPE_BUTTON_ACTIVE);
+    }
+
+    streetButton.addEventListener('click', () => SelectMapType(streetButton, satelliteButton, streetLayer, satelliteLayer));
+    satelliteButton.addEventListener('click', () => SelectMapType(satelliteButton, streetButton, satelliteLayer, streetLayer));
+
+    return mapTypeControlDiv;
 }
 
 function createRouteToggleButton(route, label, routeToggleButtonsDiv) {
@@ -260,7 +357,7 @@ function ShowCurrentLocation(setMapCenter)
     
     if (locationMarker)
     {
-        locationMarker.setMap(null);
+        locationMarker.remove();
     }
 
     if (navigator.geolocation)
@@ -273,32 +370,30 @@ function ShowCurrentLocation(setMapCenter)
                 lng: position.coords.longitude
             };
             
-            locationMarker = new google.maps.Marker(
+            locationMarker = L.marker(pos,
             {
-                position: pos,
-                map: map,
-                icon:
-                {
-                    url: 'current_location.png'
-                }
-            });
+                icon: L.icon({ iconUrl: 'current_location.png', iconSize: [30, 30], iconAnchor: [15, 30] })
+            }).addTo(map);
             
             if (setMapCenter)
             {
-                map.setCenter(pos);
-                map.setZoom(16);
+                map.setView(pos, 16);
             }
             
             document.getElementById('currentLocationButtonImage').style.backgroundPosition = (-45 * 9) + 'px 0';
-        });
+        },
+        error =>
+        {
+            showLocation = false;
+            alert('Could not get your location: ' + error.message);
+        },
+        { timeout: 15000 });
     }
 }
 
-function getBusIconData(bearing)
+function getBusIconUrl(bearing)
 {
     let iconUrl = 'bus.png';
-    let labelPos = (iconSize/2) - 2;
-    let labelOrigin = new google.maps.Point(labelPos, labelPos);
 
     //North
     if (337.5 < bearing || bearing <= 22.5)
@@ -349,7 +444,7 @@ function getBusIconData(bearing)
         console.warn(`Could not determine directional icon for bearing ${bearing}`);
     }
 
-    return { iconUrl: iconUrl, labelOrigin: labelOrigin };
+    return iconUrl;
 }
 
 async function UpdateMarkers(fetchNewData)
@@ -365,7 +460,7 @@ async function UpdateMarkers(fetchNewData)
 
     busPositionMarkers.forEach(marker =>
     {
-        marker.setMap(null);
+        marker.remove();
     });
     busPositionMarkers = [];
 
@@ -415,7 +510,7 @@ async function UpdateMarkers(fetchNewData)
             return;
         }
 
-        const busIconData = getBusIconData(bus.position.bearing);
+        const busIconUrl = getBusIconUrl(bus.position.bearing);
 
         let labelText = bus.routeShortName;
         if (labelText === '99')
@@ -434,59 +529,50 @@ async function UpdateMarkers(fetchNewData)
             labelFontSize = labelText.length > 2 ? '17px' : '24px';
         }
 
-        let marker = new google.maps.Marker(
+        let markerContent = document.createElement('div');
+        markerContent.textContent = labelText;
+        markerContent.style.backgroundImage = `url(${busIconUrl})`;
+        markerContent.style.fontSize = labelFontSize;
+        markerContent.style.color = '#' + bus.routeColour;
+
+        let marker = L.marker(
         {
-            position:
+            lat: bus.position.latitude,
+            lng: bus.position.longitude
+        },
+        {
+            icon: L.divIcon(
             {
-                lat: bus.position.latitude,
-                lng: bus.position.longitude
-            },
-            map: null,
-            label:
-            {
-                text: labelText,
-                fontWeight: 'bold',
-                fontSize: labelFontSize,
-                color: bus.routeColour
-            },
-            icon:
-            {
-                url: busIconData.iconUrl,
-                labelOrigin: busIconData.labelOrigin,
-                scaledSize: new google.maps.Size(iconSize, iconSize)
-            }
+                html: markerContent,
+                className: 'busMarker',
+                iconSize: [iconSize, iconSize],
+                iconAnchor: [iconSize / 2, iconSize],
+                popupAnchor: [0, -iconSize]
+            })
         });
 
         let infoWindowText = document.createElement('h1');
         infoWindowText.innerText =  bus.tripHeadsign;
         infoWindowText.style = 'font-size:17px';
 
-        let infoWindow = new google.maps.InfoWindow(
+        marker.bindPopup(infoWindowText, INFO_WINDOW_OPTIONS);
+
+        marker.on('click', () =>
         {
-            headerContent: infoWindowText,
+            infoWindows.push(marker.getPopup());
         });
 
-        marker.addListener('click', () =>
-        {
-            infoWindows.push(infoWindow);
-
-            infoWindow.open(
-            {
-                anchor: marker,
-                map,
-            });
-        });
-
-        marker.setMap(map);
+        marker.addTo(map);
         busPositionMarkers.push(marker);
     });
 
     if (showLocation)
     {
-        locationMarker.setMap(null);
         ShowCurrentLocation(false);
     }
 }
+
+document.addEventListener('DOMContentLoaded', InitializeMap);
 
 setInterval(async function()
 {
@@ -503,20 +589,25 @@ setInterval(async function()
     }
 }, 1000);
 
-function GenerateArrowIcons()
+function GenerateArrows(line)
 {
-    const lineSymbol =
+    return L.polylineDecorator(line,
     {
-        path: google.maps.SymbolPath.FORWARD_OPEN_ARROW,
-    };
-
-    let icons = [];
-    let interval = 100 / 10;
-    for (let i = interval; i < 100; i += interval)
-    {
-        icons.push({ icon: lineSymbol, offset: i + '%' });
-    }
-    return icons;
+        patterns:
+        [
+            {
+                offset: '10%',
+                endOffset: '10%',
+                repeat: '10%',
+                symbol: L.Symbol.arrowHead(
+                {
+                    pixelSize: 9,
+                    polygon: false,
+                    pathOptions: { color: line.options.color, weight: 3, opacity: 1 }
+                })
+            }
+        ]
+    }).addTo(map);
 }
 
 async function ToggleRoute(route, btn)
@@ -537,13 +628,11 @@ async function ToggleRoute(route, btn)
             lines: []
         };
         
-        coordSetList.forEach(coordSet => routeObj.lines.push(new google.maps.Polyline(
+        coordSetList.forEach(coordSet =>
         {
-            path: coordSet,
-            icons: GenerateArrowIcons(),
-            map: map,
-            strokeColor: '#' + route.routeColor
-        })));
+            let line = L.polyline(coordSet, { color: '#' + route.routeColor, weight: 3, opacity: 1 }).addTo(map);
+            routeObj.lines.push(line, GenerateArrows(line));
+        });
 
         displayedRoutes.push(routeObj);
 
@@ -557,13 +646,13 @@ async function ToggleRoute(route, btn)
     else
     {
         let displayedRouteIndex = displayedRoutes.findIndex(displayedRoute => displayedRoute.routeButtonText === btn.textContent);
-        displayedRoutes[displayedRouteIndex].lines.forEach(line => line.setMap(null));
+        displayedRoutes[displayedRouteIndex].lines.forEach(line => line.remove());
         displayedRoutes.splice(displayedRouteIndex, 1);
 
         if(showStops)
         {
             let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeButtonText === btn.textContent);
-            displayedStops[displayedStopIndex].stops.forEach(stop => stop.setMap(null));
+            displayedStops[displayedStopIndex].stops.forEach(stop => stop.remove());
             displayedStops.splice(displayedStopIndex, 1);
         }
 
@@ -588,7 +677,7 @@ function ToggleStops()
     {
         toggleStopsButton.classList.remove(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
         
-        displayedStops.forEach(displayedStop => displayedStop.stops.forEach(stop => stop.setMap(null)));
+        displayedStops.forEach(displayedStop => displayedStop.stops.forEach(stop => stop.remove()));
         displayedStops = [];
     }
 }
@@ -640,33 +729,22 @@ async function DisplayStops(route, routeButtonText)
         }
         else
         {
-            let marker = new google.maps.Marker(
+            let marker = L.marker({ lat: stop.stopLat, lng: stop.stopLon },
             {
-                position: { lat: stop.stopLat, lng: stop.stopLon },
-                map,
-                icon: 'marker.png',
-            });
+                icon: L.icon({ iconUrl: 'marker.png', iconSize: [26, 36], iconAnchor: [13, 36], popupAnchor: [0, -36] })
+            }).addTo(map);
 
             let infoWindowText = document.createElement('h1')
             infoWindowText.innerText =  stop.stopName;
             infoWindowText.style = "font-size:17px";
 
-            let infoWindow = new google.maps.InfoWindow(
-            {
-                headerContent: infoWindowText,
-            }); 
+            marker.bindPopup(infoWindowText, INFO_WINDOW_OPTIONS);
 
-            marker.addListener('click', () => 
+            marker.on('click', () =>
             {
-                infoWindows.push(infoWindow);
-
-                infoWindow.open(
-                {
-                    anchor: marker,
-                    map,
-                });
+                infoWindows.push(marker.getPopup());
             });
-                
+
             stopObj.stops.push(marker);   
         }
     });
@@ -695,14 +773,12 @@ function ToggleMapControls()
         document.getElementById('siteControlsDiv').classList.remove('hidden');
         document.getElementById('routeToggleButtonsDiv').classList.remove('hidden');
         document.getElementById('currentLocationControl').classList.remove('hidden');
+        document.getElementById('mapTypeControl').classList.remove('hidden');
+        document.getElementById('zoomControl').classList.remove('hidden');
 
-        if (isMobile())
+        if (!isMobile())
         {
-            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: false});
-        }
-        else
-        {
-            map.setOptions({mapTypeControl: true, zoomControl: true, fullscreenControl: true});
+            document.getElementById('fullscreenControl').classList.remove('hidden');
         }
     }
     else
@@ -710,7 +786,9 @@ function ToggleMapControls()
         document.getElementById('siteControlsDiv').classList.add('hidden');
         document.getElementById('routeToggleButtonsDiv').classList.add('hidden');
         document.getElementById('currentLocationControl').classList.add('hidden');
-        map.setOptions({mapTypeControl: false, zoomControl: false, fullscreenControl: false});
+        document.getElementById('mapTypeControl').classList.add('hidden');
+        document.getElementById('zoomControl').classList.add('hidden');
+        document.getElementById('fullscreenControl').classList.add('hidden');
     }
 }
 
