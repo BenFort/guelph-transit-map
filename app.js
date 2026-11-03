@@ -28,7 +28,7 @@ console.log(new Date().toLocaleString(), " Guelph Transit Map starting!");
 
 async function UpdateArrays()
 {
-    let response = await fetch('https://gismaps.guelph.ca/Pages/GTFS/google_transit.zip');
+    let response = await fetch('https://drive.google.com/uc?export=download&id=1SsCgQ0agO_EONavJoOuBPMlbcu2VcUs4');
     if (response.ok)
     {
         let responseData = await response.arrayBuffer();
@@ -135,7 +135,7 @@ app.get('/alerts', async function (req, res)
                     routeAndStopInfo.push(
                     {
                         routeShortName: routeShortName,
-                        stopName: stops.find(stop => stop.stop_id === idPair.stopId).stop_name
+                        stopName: stops.find(stop => stop.stop_id === idPair.stopId)?.stop_name ?? 'Unknown'
                     });
                 });
                 

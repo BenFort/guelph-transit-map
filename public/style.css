@@ -4,6 +4,70 @@
     width: 100%;
 }
 
+.leaflet-container
+{
+    font-family: Roboto, Arial, sans-serif;
+    font-size: 11px;
+    line-height: normal;
+}
+
+.leaflet-top.leaflet-right .leaflet-control
+{
+    margin: 15px 15px 15px 0;
+}
+
+.leaflet-container .leaflet-control-zoom
+{
+    border: none;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.leaflet-container .leaflet-control-zoom a
+{
+    width: 60px;
+    height: 60px;
+    line-height: 60px;
+    font-size: 36px;
+    color: #666;
+}
+
+.busMarker div
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 4px 4px 0;
+    background-size: 100% 100%;
+    font-weight: bold;
+}
+
+.mapTypeControl
+{
+    display: flex;
+    border-radius: 2px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+.mapTypeControl button
+{
+    height: 60px;
+    padding: 0 17px;
+    border: none;
+    background-color: #fff;
+    color: #565656;
+    font-size: 27px;
+    cursor: pointer;
+}
+
+.mapTypeControl .mapTypeButtonActive
+{
+    color: #000;
+    font-weight: 500;
+}
+
 p 
 {
     white-space: pre;
@@ -37,10 +101,14 @@ p
 
 .buttonDiv
 {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
     margin-left: 9%;
     margin-right: 9%;
     width: 82%;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
     overflow-y: scroll;
     max-height: 358px;
 }
@@ -55,7 +123,7 @@ p
     width: 100%;
     height: 100%;
     background: rgba(255, 255, 255, 0.7);
-    z-index: 100;
+    z-index: 1100;
     overflow-y: scroll;
 }
 
@@ -81,7 +149,7 @@ p
     background-color: #d3d2d2;
 }
 
-.currentLocationButton
+.mapControlButton
 {
     background-color: #fff;
     border: none;
@@ -91,7 +159,6 @@ p
     border-radius: 2px;
     box-shadow: 0 1px 4px rgba(0,0,0,0.3);
     cursor: pointer;
-    margin-right: 15px;
     padding: 0;
 }
 
