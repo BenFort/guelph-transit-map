@@ -10,8 +10,26 @@ const CSS_CLASS_CURRENT_LOCATION_BUTTON_IMAGE = 'currentLocationButtonImage';
 const CSS_CLASS_ALERTS_CLOSE_BUTTON = 'alertsCloseButton';
 const CSS_CLASS_MAP_TYPE_CONTROL = 'mapTypeControl';
 const CSS_CLASS_MAP_TYPE_BUTTON_ACTIVE = 'mapTypeButtonActive';
+const CSS_CLASS_ARRIVAL_ROW = 'arrivalRow';
+const CSS_CLASS_ARRIVAL_TIME = 'arrivalTime';
+const CSS_CLASS_BUS_STATUS = 'busStatus';
+const CSS_CLASS_BUS_STATUS_LATE = 'busStatusLate';
+const CSS_CLASS_NEXT_STOPS_HEADING = 'nextStopsHeading';
+const CSS_CLASS_INFO_CARD = 'infoCard';
+const CSS_CLASS_INFO_CARD_HEADER = 'infoCardHeader';
+const CSS_CLASS_INFO_CARD_TITLE = 'infoCardTitle';
+const CSS_CLASS_INFO_CARD_CLOSE_BUTTON = 'infoCardCloseButton';
+const CSS_CLASS_SIDE_PANEL = 'sidePanel';
+const CSS_CLASS_STOP_SEARCH = 'stopSearch';
+const CSS_CLASS_STOP_SEARCH_INPUT = 'stopSearchInput';
+const CSS_CLASS_STOP_SEARCH_RESULT = 'stopSearchResult';
+const CSS_CLASS_STOP_SEARCH_RESULT_ROUTES = 'stopSearchResultRoutes';
+const CSS_CLASS_STOP_SEARCH_EMPTY = 'stopSearchEmpty';
+const CSS_CLASS_SELECTED_STOP = 'selectedStop';
+const CSS_CLASS_MOBILE = 'mobile';
 const UPDATE_INTERVAL_SEC = 31;
-const INFO_WINDOW_OPTIONS = { autoClose: false, closeOnClick: false };
+const MAX_STOP_SEARCH_RESULTS = 8;
+const SIDE_PANEL_GAP = 10;
 const SHOWN_POI_CLASSES = ['park', 'school', 'college', 'hospital'];
 const SHOWN_TRANSIT_CLASSES = ['airport', 'rail'];
 
@@ -23,13 +41,18 @@ let busPositionMarkers = [];
 let displayedRoutes = [];
 let displayedStops = [];
 let busPositions = [];
-let infoWindows = [];
+let allStops = new Map();
+let infoCardRefresh = null;
+// A stop marker that exists only for the card: a searched stop, or a selected stop whose route stops were hidden
+let standaloneStopMarker = null;
+let selectedStopMarker = null;
 
 let loading = true;
 let secCount = UPDATE_INTERVAL_SEC;
 let showControls = true;
 
 let iconSize = 60;
+let stopIconSize = [26, 36];
 
 async function InitializeMap()
 {
@@ -120,7 +143,12 @@ async function InitializeMap()
     document.body.appendChild(aboutDialog);
     document.getElementById('aboutDialogClose').addEventListener('click', function() { document.getElementById('aboutDialog').close(); });
 
-    AddMapControl(siteControlsDiv, 'topleft');
+    let sidePanelDiv = document.createElement('div');
+    sidePanelDiv.id = 'sidePanel';
+    sidePanelDiv.classList.add(CSS_CLASS_SIDE_PANEL);
+    sidePanelDiv.append(siteControlsDiv, CreateStopSearch(), CreateInfoCard());
+
+    AddMapControl(sidePanelDiv, 'topleft');
 
     let fullscreenControlDiv = document.createElement('div');
     fullscreenControlDiv.id = 'fullscreenControl';
@@ -187,6 +215,8 @@ async function InitializeMap()
         routes.sort(CompareRoutes);
         routes.forEach(route =>
         {
+            AddRouteStopsToSearch(route);
+
             if (route.routeShortName === '99') 
             {
                 createRouteToggleButton(route, `${route.routeShortName} - North`, routeToggleButtonsDiv);
@@ -199,6 +229,10 @@ async function InitializeMap()
         });
         
         AddMapOverlay(routeToggleButtonsDiv);
+
+        // The side panel changes size as the search and card open and close
+        new ResizeObserver(FitSidePanelAndRouteList).observe(sidePanelDiv);
+        map.on('resize', FitSidePanelAndRouteList);
     }
     
     let alertsDiv = document.createElement('div');
@@ -259,6 +293,8 @@ async function InitializeMap()
     if (isMobile())
     {
         iconSize = 100;
+        stopIconSize = [43, 60];
+        map.getContainer().classList.add(CSS_CLASS_MOBILE);
         fullscreenControlDiv.classList.add('hidden');
     }
 
@@ -294,6 +330,49 @@ function StopMapEvents(div)
 {
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
+}
+
+// On short screens the side panel and route list share the height
+function FitSidePanelAndRouteList()
+{
+    let sidePanel = document.getElementById('sidePanel');
+    if (sidePanel.classList.contains('hidden'))
+    {
+        return;
+    }
+
+    let routeList = document.getElementById('routeToggleButtonsDiv');
+    let routeListBottom = routeList.getBoundingClientRect().bottom;
+    let sidePanelLimit = routeListBottom - parseFloat(getComputedStyle(routeList).minHeight) - SIDE_PANEL_GAP;
+
+    let infoCardBody = document.getElementById('infoCardBody');
+    let stopSearchResults = document.getElementById('stopSearchResults');
+
+    // Each part keeps its first lines visible even if that means covering the route list, which stays scrollable behind it
+    let shrinkableParts =
+    [
+        { element: document.getElementById('infoCard'), lastKeptChild: () => infoCardBody.querySelector('.' + CSS_CLASS_ARRIVAL_ROW) ?? infoCardBody },
+        { element: stopSearchResults, lastKeptChild: () => stopSearchResults.children[1] ?? stopSearchResults.lastElementChild }
+    ];
+
+    shrinkableParts.forEach(part => part.element.style.maxHeight = '');
+
+    let overflow = sidePanel.getBoundingClientRect().bottom - sidePanelLimit;
+    shrinkableParts.forEach(part =>
+    {
+        let height = part.element.offsetHeight;
+        let lastKeptChild = part.lastKeptChild();
+        let minimumHeight = lastKeptChild ? lastKeptChild.getBoundingClientRect().bottom - part.element.getBoundingClientRect().top : 0;
+        let shrink = Math.min(overflow, height - minimumHeight);
+
+        if (height > 0 && shrink > 0)
+        {
+            part.element.style.maxHeight = (height - shrink) + 'px';
+            overflow -= shrink;
+        }
+    });
+
+    routeList.style.setProperty('--available-height', (routeListBottom - sidePanel.getBoundingClientRect().bottom - SIDE_PANEL_GAP) + 'px');
 }
 
 function AddMapControl(div, position)
@@ -546,21 +625,11 @@ async function UpdateMarkers(fetchNewData)
                 html: markerContent,
                 className: 'busMarker',
                 iconSize: [iconSize, iconSize],
-                iconAnchor: [iconSize / 2, iconSize],
-                popupAnchor: [0, -iconSize]
+                iconAnchor: [iconSize / 2, iconSize]
             })
         });
 
-        let infoWindowText = document.createElement('h1');
-        infoWindowText.innerText =  bus.tripHeadsign;
-        infoWindowText.style = 'font-size:17px';
-
-        marker.bindPopup(infoWindowText, INFO_WINDOW_OPTIONS);
-
-        marker.on('click', () =>
-        {
-            infoWindows.push(marker.getPopup());
-        });
+        marker.on('click', async () => await ShowInfoCard(bus.tripHeadsign || bus.routeShortName, () => CreateBusTripInfo(bus.tripId)));
 
         marker.addTo(map);
         busPositionMarkers.push(marker);
@@ -569,6 +638,11 @@ async function UpdateMarkers(fetchNewData)
     if (showLocation)
     {
         ShowCurrentLocation(false);
+    }
+
+    if (fetchNewData && infoCardRefresh)
+    {
+        await infoCardRefresh();
     }
 }
 
@@ -652,7 +726,7 @@ async function ToggleRoute(route, btn)
         if(showStops)
         {
             let displayedStopIndex = displayedStops.findIndex(displayedStopList => displayedStopList.routeButtonText === btn.textContent);
-            displayedStops[displayedStopIndex].stops.forEach(stop => stop.remove());
+            RemoveStopMarkers(displayedStops[displayedStopIndex].stops);
             displayedStops.splice(displayedStopIndex, 1);
         }
 
@@ -677,7 +751,7 @@ function ToggleStops()
     {
         toggleStopsButton.classList.remove(CSS_CLASS_TOGGLE_BUTTON_ACTIVE);
         
-        displayedStops.forEach(displayedStop => displayedStop.stops.forEach(stop => stop.remove()));
+        displayedStops.forEach(displayedStop => RemoveStopMarkers(displayedStop.stops));
         displayedStops = [];
     }
 }
@@ -729,21 +803,7 @@ async function DisplayStops(route, routeButtonText)
         }
         else
         {
-            let marker = L.marker({ lat: stop.stopLat, lng: stop.stopLon },
-            {
-                icon: L.icon({ iconUrl: 'marker.png', iconSize: [26, 36], iconAnchor: [13, 36], popupAnchor: [0, -36] })
-            }).addTo(map);
-
-            let infoWindowText = document.createElement('h1')
-            infoWindowText.innerText =  stop.stopName;
-            infoWindowText.style = "font-size:17px";
-
-            marker.bindPopup(infoWindowText, INFO_WINDOW_OPTIONS);
-
-            marker.on('click', () =>
-            {
-                infoWindows.push(marker.getPopup());
-            });
+            let marker = CreateStopMarker(stop);
 
             stopObj.stops.push(marker);   
         }
@@ -754,10 +814,9 @@ async function DisplayStops(route, routeButtonText)
 
 function MapClick()
 {
-    if (infoWindows.length !== 0)
+    if (infoCardRefresh)
     {
-        infoWindows.forEach(infoWindow => infoWindow.close());
-        infoWindows = [];
+        CloseInfoCard();
     }
     else
     {
@@ -770,7 +829,7 @@ function ToggleMapControls()
     showControls = !showControls;
     if (showControls)
     {
-        document.getElementById('siteControlsDiv').classList.remove('hidden');
+        document.getElementById('sidePanel').classList.remove('hidden');
         document.getElementById('routeToggleButtonsDiv').classList.remove('hidden');
         document.getElementById('currentLocationControl').classList.remove('hidden');
         document.getElementById('mapTypeControl').classList.remove('hidden');
@@ -783,7 +842,7 @@ function ToggleMapControls()
     }
     else
     {
-        document.getElementById('siteControlsDiv').classList.add('hidden');
+        document.getElementById('sidePanel').classList.add('hidden');
         document.getElementById('routeToggleButtonsDiv').classList.add('hidden');
         document.getElementById('currentLocationControl').classList.add('hidden');
         document.getElementById('mapTypeControl').classList.add('hidden');
@@ -825,6 +884,379 @@ async function GetStopIdsForTripHeadsign(tripHeadsign)
     }
 
     return await response.json();
+}
+
+function CreateStopMarker(stop)
+{
+    let marker = L.marker({ lat: stop.stopLat, lng: stop.stopLon },
+    {
+        stopId: stop.stopId,
+        icon: L.icon({ iconUrl: 'marker.png', iconSize: stopIconSize, iconAnchor: [stopIconSize[0] / 2, stopIconSize[1]] })
+    }).addTo(map);
+
+    marker.on('click', async () => await ShowInfoCard(stop.stopName, () => CreateStopArrivals(stop.stopId), marker));
+
+    return marker;
+}
+
+function CreateInfoCard()
+{
+    let infoCardDiv = document.createElement('div');
+    infoCardDiv.id = 'infoCard';
+    infoCardDiv.classList.add(CSS_CLASS_ROUNDCORNERS, CSS_CLASS_INFO_CARD, 'hidden');
+
+    let headerDiv = document.createElement('div');
+    headerDiv.classList.add(CSS_CLASS_INFO_CARD_HEADER);
+
+    let titleHeading = document.createElement('h1');
+    titleHeading.id = 'infoCardTitle';
+    titleHeading.classList.add(CSS_CLASS_INFO_CARD_TITLE);
+
+    let closeButton = document.createElement('button');
+    closeButton.id = 'infoCardCloseButton';
+    closeButton.title = 'Close';
+    closeButton.textContent = '\u00D7';
+    closeButton.classList.add(CSS_CLASS_INFO_CARD_CLOSE_BUTTON);
+    closeButton.addEventListener('click', CloseInfoCard);
+
+    headerDiv.append(titleHeading, closeButton);
+
+    let bodyDiv = document.createElement('div');
+    bodyDiv.id = 'infoCardBody';
+
+    infoCardDiv.append(headerDiv, bodyDiv);
+    return infoCardDiv;
+}
+
+// createContent builds the card body. Only the most recently shown item may fill the card, so a slow
+// response for an earlier click can't replace a newer one
+async function ShowInfoCard(title, createContent, stopMarker = null)
+{
+    if (standaloneStopMarker !== stopMarker)
+    {
+        RemoveStandaloneStopMarker();
+    }
+
+    HighlightStopMarker(stopMarker);
+
+    document.getElementById('infoCardTitle').textContent = title;
+    document.getElementById('infoCardBody').textContent = 'Loading...';
+    document.getElementById('infoCard').classList.remove('hidden');
+
+    let refresh = async () =>
+    {
+        let content = await createContent();
+        if (infoCardRefresh === refresh)
+        {
+            document.getElementById('infoCardBody').replaceChildren(content);
+        }
+    };
+
+    infoCardRefresh = refresh;
+    await refresh();
+}
+
+function CloseInfoCard()
+{
+    document.getElementById('infoCard').classList.add('hidden');
+    infoCardRefresh = null;
+    HighlightStopMarker(null);
+    RemoveStandaloneStopMarker();
+}
+
+function RemoveStandaloneStopMarker()
+{
+    if (standaloneStopMarker)
+    {
+        standaloneStopMarker.remove();
+        standaloneStopMarker = null;
+    }
+}
+
+// The selected stop stays on the map until its card closes
+function RemoveStopMarkers(stopMarkers)
+{
+    stopMarkers.forEach(stopMarker =>
+    {
+        if (stopMarker === selectedStopMarker)
+        {
+            standaloneStopMarker = stopMarker;
+        }
+        else
+        {
+            stopMarker.remove();
+        }
+    });
+}
+
+function FindDisplayedStopMarker(stopId)
+{
+    return displayedStops.flatMap(displayedStop => displayedStop.stops).find(marker => marker.options.stopId === stopId);
+}
+
+function HighlightStopMarker(marker)
+{
+    if (selectedStopMarker)
+    {
+        selectedStopMarker.getElement()?.classList.remove(CSS_CLASS_SELECTED_STOP);
+        selectedStopMarker.setZIndexOffset(0);
+    }
+
+    selectedStopMarker = marker;
+
+    if (selectedStopMarker)
+    {
+        selectedStopMarker.getElement()?.classList.add(CSS_CLASS_SELECTED_STOP);
+        selectedStopMarker.setZIndexOffset(1000);
+    }
+}
+
+function AddRouteStopsToSearch(route)
+{
+    route.routeStops.forEach(stop =>
+    {
+        if (!allStops.has(stop.stopId))
+        {
+            allStops.set(stop.stopId, { ...stop, routeShortNames: new Set() });
+        }
+
+        allStops.get(stop.stopId).routeShortNames.add(route.routeShortName);
+    });
+}
+
+function CreateStopSearch()
+{
+    let stopSearchDiv = document.createElement('div');
+    stopSearchDiv.id = 'stopSearch';
+    stopSearchDiv.classList.add(CSS_CLASS_ROUNDCORNERS, CSS_CLASS_STOP_SEARCH);
+
+    let searchInput = document.createElement('input');
+    searchInput.id = 'stopSearchInput';
+    searchInput.type = 'search';
+    searchInput.placeholder = 'Search for a stop';
+    searchInput.autocomplete = 'off';
+    searchInput.classList.add(CSS_CLASS_STOP_SEARCH_INPUT);
+
+    let resultsDiv = document.createElement('div');
+    resultsDiv.id = 'stopSearchResults';
+
+    searchInput.addEventListener('input', () => UpdateStopSearchResults(searchInput.value, resultsDiv));
+    searchInput.addEventListener('keydown', event =>
+    {
+        if (event.key === 'Enter')
+        {
+            resultsDiv.querySelector('button')?.click();
+        }
+        else if (event.key === 'Escape')
+        {
+            ClearStopSearch();
+        }
+    });
+
+    stopSearchDiv.append(searchInput, resultsDiv);
+    return stopSearchDiv;
+}
+
+function UpdateStopSearchResults(query, resultsDiv)
+{
+    resultsDiv.replaceChildren();
+
+    let searchText = query.trim().toLowerCase();
+    if (searchText.length < 2)
+    {
+        return;
+    }
+
+    // An exact stop number comes first, then names starting with the search, then other name matches
+    let getSearchRank = stop => stop.stopId === searchText ? 0 : stop.stopName.toLowerCase().startsWith(searchText) ? 1 : 2;
+
+    let matchingStops = [...allStops.values()]
+        .filter(stop => stop.stopName.toLowerCase().includes(searchText) || stop.stopId === searchText)
+        .sort((stopA, stopB) => getSearchRank(stopA) - getSearchRank(stopB) || stopA.stopName.localeCompare(stopB.stopName))
+        .slice(0, MAX_STOP_SEARCH_RESULTS);
+
+    if (matchingStops.length === 0)
+    {
+        let emptyDiv = document.createElement('div');
+        emptyDiv.classList.add(CSS_CLASS_STOP_SEARCH_EMPTY);
+        emptyDiv.textContent = 'No stops found';
+        resultsDiv.appendChild(emptyDiv);
+        return;
+    }
+
+    matchingStops.forEach(stop =>
+    {
+        let resultButton = document.createElement('button');
+        resultButton.classList.add(CSS_CLASS_STOP_SEARCH_RESULT);
+        resultButton.textContent = stop.stopName;
+
+        let routesSpan = document.createElement('span');
+        routesSpan.classList.add(CSS_CLASS_STOP_SEARCH_RESULT_ROUTES);
+        routesSpan.textContent = 'Stop ' + stop.stopId + ' · Routes ' + [...stop.routeShortNames].join(', ');
+        resultButton.appendChild(routesSpan);
+
+        // Selecting removes this button, which would let the click reach the map and close the new card
+        resultButton.addEventListener('click', async event =>
+        {
+            event.stopPropagation();
+            await SelectSearchedStop(stop);
+        });
+        resultsDiv.appendChild(resultButton);
+    });
+}
+
+function ClearStopSearch()
+{
+    document.getElementById('stopSearchInput').value = '';
+    document.getElementById('stopSearchResults').replaceChildren();
+}
+
+async function SelectSearchedStop(stop)
+{
+    ClearStopSearch();
+    document.getElementById('stopSearchInput').blur();
+
+    RemoveStandaloneStopMarker();
+    map.setView({ lat: stop.stopLat, lng: stop.stopLon }, 17);
+
+    // A stop already shown for a displayed route is reused, so it stays after the card moves on
+    let stopMarker = FindDisplayedStopMarker(stop.stopId);
+    if (!stopMarker)
+    {
+        stopMarker = CreateStopMarker(stop);
+        standaloneStopMarker = stopMarker;
+    }
+
+    await ShowInfoCard(stop.stopName, () => CreateStopArrivals(stop.stopId), stopMarker);
+}
+
+async function CreateStopArrivals(stopId)
+{
+    let arrivalsDiv = document.createElement('div');
+
+    try
+    {
+        let response = await fetch('stop-arrivals?' + new URLSearchParams({ stopId }));
+        if (!response.ok)
+        {
+            throw new Error('Failed to fetch stop arrivals');
+        }
+
+        let arrivals = await response.json();
+
+        if (arrivals.length === 0)
+        {
+            arrivalsDiv.textContent = 'No live arrival times available';
+        }
+
+        arrivals.forEach(arrival => arrivalsDiv.appendChild(CreateArrivalRow(arrival.tripHeadsign || arrival.routeShortName, arrival.arrivalTime, arrival.routeColour)));
+    }
+    catch (error)
+    {
+        arrivalsDiv.textContent = 'Arrival times are unavailable right now';
+    }
+
+    return arrivalsDiv;
+}
+
+async function CreateBusTripInfo(tripId)
+{
+    let tripInfoDiv = document.createElement('div');
+
+    try
+    {
+        let response = await fetch('bus-trip?' + new URLSearchParams({ tripId }));
+        if (!response.ok)
+        {
+            throw new Error('Failed to fetch bus trip');
+        }
+
+        let busTrip = await response.json();
+
+        if (busTrip.delaySeconds !== null)
+        {
+            let delayMinutes = Math.round(busTrip.delaySeconds / 60);
+
+            let statusDiv = document.createElement('div');
+            statusDiv.classList.add(CSS_CLASS_BUS_STATUS);
+            statusDiv.textContent = FormatDelay(delayMinutes);
+
+            if (delayMinutes > 0)
+            {
+                statusDiv.classList.add(CSS_CLASS_BUS_STATUS_LATE);
+            }
+
+            tripInfoDiv.appendChild(statusDiv);
+        }
+
+        if (busTrip.nextStops.length === 0)
+        {
+            tripInfoDiv.append('No live stop times available');
+        }
+        else
+        {
+            let nextStopsHeading = document.createElement('div');
+            nextStopsHeading.classList.add(CSS_CLASS_NEXT_STOPS_HEADING);
+            nextStopsHeading.textContent = 'Next stops';
+            tripInfoDiv.appendChild(nextStopsHeading);
+
+            busTrip.nextStops.forEach(nextStop => tripInfoDiv.appendChild(CreateArrivalRow(nextStop.stopName, nextStop.arrivalTime, null)));
+        }
+    }
+    catch (error)
+    {
+        tripInfoDiv.textContent = 'Upcoming stops are unavailable right now';
+    }
+
+    return tripInfoDiv;
+}
+
+function CreateArrivalRow(label, arrivalTime, routeColour)
+{
+    let row = document.createElement('div');
+    row.classList.add(CSS_CLASS_ARRIVAL_ROW);
+
+    if (routeColour)
+    {
+        row.style.borderLeftColor = '#' + routeColour;
+    }
+
+    let labelSpan = document.createElement('span');
+    labelSpan.textContent = label;
+
+    let timeSpan = document.createElement('span');
+    timeSpan.classList.add(CSS_CLASS_ARRIVAL_TIME);
+    timeSpan.textContent = FormatArrivalTime(arrivalTime);
+
+    row.append(labelSpan, timeSpan);
+    return row;
+}
+
+function FormatArrivalTime(arrivalTime)
+{
+    let minutes = Math.round((arrivalTime * 1000 - Date.now()) / 60000);
+
+    if (minutes <= 0)
+    {
+        return 'Now';
+    }
+
+    if (minutes < 60)
+    {
+        return minutes + ' min';
+    }
+
+    return new Date(arrivalTime * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function FormatDelay(delayMinutes)
+{
+    if (delayMinutes === 0)
+    {
+        return 'On time';
+    }
+
+    return Math.abs(delayMinutes) + (delayMinutes > 0 ? ' min late' : ' min early');
 }
 
 function isMobile()

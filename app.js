@@ -9,6 +9,15 @@ let shapes = [];
 let stops = [];
 let stopTimes = [];
 
+const TRIP_UPDATES_MAX_AGE_MS = 30 * 1000;
+const TRIP_UPDATES_TIMEOUT_MS = 10 * 1000;
+const MAX_STOP_ARRIVALS = 5;
+const MAX_NEXT_STOPS = 5;
+
+let tripUpdates = [];
+let tripUpdatesFetchedAt = 0;
+let tripUpdatesRequest = null;
+
 let root = protobuf.loadSync('gtfs-realtime.proto');
 let FeedMessage = root.lookupType("transit_realtime.FeedMessage");
 
@@ -18,6 +27,19 @@ let DateFormatter = new Intl.DateTimeFormat(
         dateStyle: 'medium',
         timeStyle: 'short',
         timeZone: 'America/Toronto'
+    });
+
+let TorontoTimeFormatter = new Intl.DateTimeFormat(
+    'en-US',
+    {
+        timeZone: 'America/Toronto',
+        hourCycle: 'h23',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric'
     });
 
 const app = express();
@@ -72,6 +94,78 @@ async function GetRouteData(routeId)
     return { routeName: route?.route_short_name ?? '?', routeColour: route?.route_color ?? '000000' };
 }
 
+// The predictions feed is large, so it is fetched at most once per TRIP_UPDATES_MAX_AGE_MS and shared between requests
+async function GetTripUpdates()
+{
+    if (Date.now() - tripUpdatesFetchedAt > TRIP_UPDATES_MAX_AGE_MS)
+    {
+        tripUpdatesRequest ??= FetchTripUpdates().finally(() => tripUpdatesRequest = null);
+        await tripUpdatesRequest;
+    }
+
+    return tripUpdates;
+}
+
+async function FetchTripUpdates()
+{
+    let tripUpdatesResponse = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/tripupdate/tripupdates.pb', { signal: AbortSignal.timeout(TRIP_UPDATES_TIMEOUT_MS) });
+    if (!tripUpdatesResponse.ok)
+    {
+        throw new Error('Trip updates request failed with status ' + tripUpdatesResponse.status);
+    }
+
+    let object = FeedMessage.toObject(FeedMessage.decode(new Uint8Array(await tripUpdatesResponse.arrayBuffer())),
+    {
+        enums: String,
+        longs: Number
+    });
+
+    tripUpdates = (object.entity ?? [])
+        .map(entity => entity.tripUpdate)
+        .filter(tripUpdate => tripUpdate?.trip.tripId && tripUpdate.trip.scheduleRelationship !== 'CANCELED');
+    tripUpdatesFetchedAt = Date.now();
+}
+
+function GetUpcomingStops(tripUpdate)
+{
+    let earliestTime = Date.now() / 1000 - 60;
+
+    return (tripUpdate.stopTimeUpdate ?? [])
+        .filter(stopTimeUpdate => stopTimeUpdate.scheduleRelationship !== 'SKIPPED')
+        .map(stopTimeUpdate => (
+        {
+            stopId: stopTimeUpdate.stopId,
+            stopSequence: stopTimeUpdate.stopSequence,
+            arrivalTime: stopTimeUpdate.arrival?.time ?? stopTimeUpdate.departure?.time
+        }))
+        .filter(upcomingStop => upcomingStop.arrivalTime >= earliestTime);
+}
+
+// GTFS schedule times are counted from noon minus 12 hours, local time, on the trip's service date
+function GetServiceDayStart(startDate)
+{
+    let noonUtcMs = Date.UTC(Number(startDate.slice(0, 4)), Number(startDate.slice(4, 6)) - 1, Number(startDate.slice(6, 8)), 12);
+    let parts = {};
+    TorontoTimeFormatter.formatToParts(new Date(noonUtcMs)).forEach(part => parts[part.type] = Number(part.value));
+    let torontoOffsetMs = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second) - noonUtcMs;
+
+    return (noonUtcMs - torontoOffsetMs) / 1000 - 12 * 60 * 60;
+}
+
+function GetDelaySeconds(tripUpdate, upcomingStop)
+{
+    let scheduledStop = stopTimes.find(stopTime => stopTime.trip_id === tripUpdate.trip.tripId && Number(stopTime.stop_sequence) === upcomingStop.stopSequence);
+
+    if (!scheduledStop?.arrival_time || !tripUpdate.trip.startDate)
+    {
+        return null;
+    }
+
+    let [hours, minutes, seconds] = scheduledStop.arrival_time.split(':').map(Number);
+
+    return upcomingStop.arrivalTime - (GetServiceDayStart(tripUpdate.trip.startDate) + hours * 3600 + minutes * 60 + seconds);
+}
+
 app.get('/bus-positions', async function (req, res)
 {
     let vehiclePositionsResponse = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/vehicle/vehiclepositions.pb');
@@ -94,7 +188,8 @@ app.get('/bus-positions', async function (req, res)
                 routeShortName: routeData.routeName,
                 routeColour: routeData.routeColour,
                 position: vehicle.position,
-                tripHeadsign: tripHeadsign
+                tripHeadsign: tripHeadsign,
+                tripId: vehicle.trip.tripId
             });
         }
 
@@ -165,6 +260,66 @@ app.get('/alerts', async function (req, res)
         }
 
         res.json(alerts);
+    }
+});
+
+app.get('/stop-arrivals', async function (req, res)
+{
+    try
+    {
+        let arrivals = [];
+
+        for (let tripUpdate of await GetTripUpdates())
+        {
+            let upcomingStop = GetUpcomingStops(tripUpdate).find(upcomingStop => upcomingStop.stopId === req.query.stopId);
+
+            if (!upcomingStop)
+            {
+                continue;
+            }
+
+            let route = routes.find(route => route.route_id === tripUpdate.trip.routeId);
+
+            arrivals.push(
+            {
+                routeShortName: route?.route_short_name ?? '?',
+                routeColour: route?.route_color ?? '000000',
+                tripHeadsign: trips.find(trip => trip.trip_id === tripUpdate.trip.tripId)?.trip_headsign ?? '',
+                arrivalTime: upcomingStop.arrivalTime
+            });
+        }
+
+        arrivals.sort((arrivalA, arrivalB) => arrivalA.arrivalTime - arrivalB.arrivalTime);
+        res.json(arrivals.slice(0, MAX_STOP_ARRIVALS));
+    }
+    catch (error)
+    {
+        console.error('An error occurred when getting stop arrivals:\n', error.stack);
+        res.status(502).json([]);
+    }
+});
+
+app.get('/bus-trip', async function (req, res)
+{
+    try
+    {
+        let tripUpdate = (await GetTripUpdates()).find(tripUpdate => tripUpdate.trip.tripId === req.query.tripId);
+        let upcomingStops = tripUpdate ? GetUpcomingStops(tripUpdate) : [];
+
+        res.json(
+        {
+            delaySeconds: upcomingStops.length > 0 ? GetDelaySeconds(tripUpdate, upcomingStops[0]) : null,
+            nextStops: upcomingStops.slice(0, MAX_NEXT_STOPS).map(upcomingStop => (
+            {
+                stopName: stops.find(stop => stop.stop_id === upcomingStop.stopId)?.stop_name ?? 'Unknown',
+                arrivalTime: upcomingStop.arrivalTime
+            }))
+        });
+    }
+    catch (error)
+    {
+        console.error('An error occurred when getting the bus trip:\n', error.stack);
+        res.status(502).json({ delaySeconds: null, nextStops: [] });
     }
 });
 
