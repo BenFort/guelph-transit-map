@@ -10,6 +10,7 @@ let stops = [];
 let stopTimes = [];
 
 const TRIP_UPDATES_MAX_AGE_MS = 30 * 1000;
+const TRIP_UPDATES_TIMEOUT_MS = 10 * 1000;
 const MAX_STOP_ARRIVALS = 5;
 const MAX_NEXT_STOPS = 5;
 
@@ -107,7 +108,7 @@ async function GetTripUpdates()
 
 async function FetchTripUpdates()
 {
-    let tripUpdatesResponse = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/tripupdate/tripupdates.pb');
+    let tripUpdatesResponse = await fetch('https://glphprdtmgtfs.glphtrpcloud.com/tmgtfsrealtimewebservice/tripupdate/tripupdates.pb', { signal: AbortSignal.timeout(TRIP_UPDATES_TIMEOUT_MS) });
     if (!tripUpdatesResponse.ok)
     {
         throw new Error('Trip updates request failed with status ' + tripUpdatesResponse.status);

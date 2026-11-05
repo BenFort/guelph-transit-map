@@ -29,6 +29,7 @@ const CSS_CLASS_SELECTED_STOP = 'selectedStop';
 const CSS_CLASS_MOBILE = 'mobile';
 const UPDATE_INTERVAL_SEC = 31;
 const MAX_STOP_SEARCH_RESULTS = 8;
+const SIDE_PANEL_GAP = 10;
 const SHOWN_POI_CLASSES = ['park', 'school', 'college', 'hospital'];
 const SHOWN_TRANSIT_CLASSES = ['airport', 'rail'];
 
@@ -228,6 +229,10 @@ async function InitializeMap()
         });
         
         AddMapOverlay(routeToggleButtonsDiv);
+
+        // The side panel changes size as the search and card open and close
+        new ResizeObserver(FitSidePanelAndRouteList).observe(sidePanelDiv);
+        map.on('resize', FitSidePanelAndRouteList);
     }
     
     let alertsDiv = document.createElement('div');
@@ -325,6 +330,49 @@ function StopMapEvents(div)
 {
     L.DomEvent.disableClickPropagation(div);
     L.DomEvent.disableScrollPropagation(div);
+}
+
+// On short screens the side panel and route list share the height
+function FitSidePanelAndRouteList()
+{
+    let sidePanel = document.getElementById('sidePanel');
+    if (sidePanel.classList.contains('hidden'))
+    {
+        return;
+    }
+
+    let routeList = document.getElementById('routeToggleButtonsDiv');
+    let routeListBottom = routeList.getBoundingClientRect().bottom;
+    let sidePanelLimit = routeListBottom - parseFloat(getComputedStyle(routeList).minHeight) - SIDE_PANEL_GAP;
+
+    let infoCardBody = document.getElementById('infoCardBody');
+    let stopSearchResults = document.getElementById('stopSearchResults');
+
+    // Each part keeps its first lines visible even if that means covering the route list, which stays scrollable behind it
+    let shrinkableParts =
+    [
+        { element: document.getElementById('infoCard'), lastKeptChild: () => infoCardBody.querySelector('.' + CSS_CLASS_ARRIVAL_ROW) ?? infoCardBody },
+        { element: stopSearchResults, lastKeptChild: () => stopSearchResults.children[1] ?? stopSearchResults.lastElementChild }
+    ];
+
+    shrinkableParts.forEach(part => part.element.style.maxHeight = '');
+
+    let overflow = sidePanel.getBoundingClientRect().bottom - sidePanelLimit;
+    shrinkableParts.forEach(part =>
+    {
+        let height = part.element.offsetHeight;
+        let lastKeptChild = part.lastKeptChild();
+        let minimumHeight = lastKeptChild ? lastKeptChild.getBoundingClientRect().bottom - part.element.getBoundingClientRect().top : 0;
+        let shrink = Math.min(overflow, height - minimumHeight);
+
+        if (height > 0 && shrink > 0)
+        {
+            part.element.style.maxHeight = (height - shrink) + 'px';
+            overflow -= shrink;
+        }
+    });
+
+    routeList.style.setProperty('--available-height', (routeListBottom - sidePanel.getBoundingClientRect().bottom - SIDE_PANEL_GAP) + 'px');
 }
 
 function AddMapControl(div, position)
@@ -1019,9 +1067,12 @@ function UpdateStopSearchResults(query, resultsDiv)
         return;
     }
 
+    // An exact stop number comes first, then names starting with the search, then other name matches
+    let getSearchRank = stop => stop.stopId === searchText ? 0 : stop.stopName.toLowerCase().startsWith(searchText) ? 1 : 2;
+
     let matchingStops = [...allStops.values()]
         .filter(stop => stop.stopName.toLowerCase().includes(searchText) || stop.stopId === searchText)
-        .sort((stopA, stopB) => Number(!stopA.stopName.toLowerCase().startsWith(searchText)) - Number(!stopB.stopName.toLowerCase().startsWith(searchText)) || stopA.stopName.localeCompare(stopB.stopName))
+        .sort((stopA, stopB) => getSearchRank(stopA) - getSearchRank(stopB) || stopA.stopName.localeCompare(stopB.stopName))
         .slice(0, MAX_STOP_SEARCH_RESULTS);
 
     if (matchingStops.length === 0)
@@ -1041,7 +1092,7 @@ function UpdateStopSearchResults(query, resultsDiv)
 
         let routesSpan = document.createElement('span');
         routesSpan.classList.add(CSS_CLASS_STOP_SEARCH_RESULT_ROUTES);
-        routesSpan.textContent = 'Routes ' + [...stop.routeShortNames].join(', ');
+        routesSpan.textContent = 'Stop ' + stop.stopId + ' · Routes ' + [...stop.routeShortNames].join(', ');
         resultButton.appendChild(routesSpan);
 
         // Selecting removes this button, which would let the click reach the map and close the new card
@@ -1095,7 +1146,7 @@ async function CreateStopArrivals(stopId)
 
         if (arrivals.length === 0)
         {
-            arrivalsDiv.textContent = 'No upcoming buses';
+            arrivalsDiv.textContent = 'No live arrival times available';
         }
 
         arrivals.forEach(arrival => arrivalsDiv.appendChild(CreateArrivalRow(arrival.tripHeadsign || arrival.routeShortName, arrival.arrivalTime, arrival.routeColour)));
@@ -1140,7 +1191,7 @@ async function CreateBusTripInfo(tripId)
 
         if (busTrip.nextStops.length === 0)
         {
-            tripInfoDiv.append('No upcoming stops');
+            tripInfoDiv.append('No live stop times available');
         }
         else
         {

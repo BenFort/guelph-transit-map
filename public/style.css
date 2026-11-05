@@ -172,6 +172,7 @@
 
 .rcorners.infoCard
 {
+    box-sizing: border-box;
     max-height: 45vh;
     padding: 16px 20px;
     overflow-y: auto;
@@ -285,7 +286,9 @@ p
     width: 82%;
     margin-bottom: 20px;
     overflow-y: scroll;
-    max-height: 358px;
+    /* At least one row of route buttons, and no more than the space below the side panel */
+    min-height: 82px;
+    max-height: min(358px, var(--available-height, 358px));
 }
 
 .alertsDiv
